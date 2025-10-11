@@ -41,7 +41,7 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [expiryDate, setExpiryDate] = useState("");
-  const [isCommunal, setIsCommunal] = useState(false);
+  const [isCommunal, setIsCommunal] = useState(true);
   const [emoji, setEmoji] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -56,7 +56,7 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       setName("");
       setQuantity(1);
       setExpiryDate("");
-      setIsCommunal(false);
+      setIsCommunal(true);
       setEmoji("");
     }
   }, [editItem, isOpen]);

@@ -9,8 +9,8 @@ interface SideNavProps {
 }
 
 const navItems = [
-  { to: "/dashboard", icon: Home, label: "My Shelf" },
-  { to: "/shared", icon: Users, label: "Shared Shelf" },
+  { to: "/shared", icon: Home, label: "Shared Shelf" },
+  { to: "/dashboard", icon: Users, label: "My Shelf" },
   { to: "/expiring", icon: Clock, label: "Expiring Soon" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
