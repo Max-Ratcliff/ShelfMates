@@ -13,12 +13,15 @@ import {
 } from "@/components/ui/dialog";
 import { Item } from "./ItemCard";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useHousehold } from "@/contexts/HouseholdContext";
+import { addItem, updateItem, Item as FirestoreItem } from "@/services/itemService";
 
 interface AddItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (item: Omit<Item, "id">) => void;
-  editItem?: Item | null;
+  onSave?: (item: Omit<Item, "id">) => void;
+  editItem?: FirestoreItem | null;
 }
 
 const commonEmojis = [
@@ -33,11 +36,14 @@ const commonEmojis = [
 ];
 
 export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModalProps) {
+  const { currentUser } = useAuth();
+  const { householdId, userData } = useHousehold();
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [expiryDate, setExpiryDate] = useState("");
   const [isCommunal, setIsCommunal] = useState(false);
   const [emoji, setEmoji] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (editItem) {
@@ -55,25 +61,60 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
     }
   }, [editItem, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       toast.error("Please enter an item name");
       return;
     }
 
-    onSave({
-      name: name.trim(),
-      quantity,
-      expiryDate,
-      isCommunal,
-      ownerName: isCommunal ? undefined : "You",
-      emoji: emoji || undefined,
-    });
+    if (!currentUser || !householdId) {
+      toast.error("You must be logged in and part of a household");
+      return;
+    }
 
-    toast.success(editItem ? "Item updated successfully" : "Item added successfully");
-    onClose();
+    setSaving(true);
+
+    try {
+      // Build item data, excluding undefined fields
+      const itemData: any = {
+        name: name.trim(),
+        quantity,
+        expiryDate,
+        isCommunal,
+        ownerId: currentUser.uid,
+        householdId,
+      };
+
+      // Only add ownerName if it's a personal item
+      if (!isCommunal) {
+        itemData.ownerName = userData?.name || "You";
+      }
+
+      // Only add emoji if one was selected
+      if (emoji) {
+        itemData.emoji = emoji;
+      }
+
+      if (editItem) {
+        await updateItem(editItem.id, itemData);
+        toast.success("Item updated successfully");
+      } else {
+        await addItem(itemData);
+        toast.success("Item added successfully");
+      }
+
+      // Call onSave if provided (for backwards compatibility)
+      onSave?.(itemData);
+
+      onClose();
+    } catch (error) {
+      console.error("Error saving item:", error);
+      toast.error(editItem ? "Failed to update item" : "Failed to add item");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -171,11 +212,11 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit">
-              {editItem ? "Update" : "Add"} Item
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : editItem ? "Update Item" : "Add Item"}
             </Button>
           </DialogFooter>
         </form>

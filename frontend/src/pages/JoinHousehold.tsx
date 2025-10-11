@@ -4,20 +4,79 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useHousehold } from "@/contexts/HouseholdContext";
+import { createHousehold, joinHousehold } from "@/services/householdService";
 
 export default function JoinHousehold() {
   const [inviteCode, setInviteCode] = useState("");
+  const [householdName, setHouseholdName] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const { refreshUserData } = useHousehold();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleJoinHousehold = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Firebase check will go here
-    if (inviteCode.length === 8) {
-      toast.success("Joined household successfully!");
+
+    if (!currentUser) {
+      toast.error("You must be logged in to join a household");
+      navigate("/login");
+      return;
+    }
+
+    if (!inviteCode.trim() || inviteCode.length !== 6) {
+      toast.error("Please enter a valid 6-character invite code");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const household = await joinHousehold(inviteCode.trim(), currentUser.uid);
+      await refreshUserData();
+      toast.success(`Joined ${household.name} successfully!`);
       navigate("/dashboard");
-    } else {
-      toast.error("Invalid invite code");
+    } catch (error: any) {
+      console.error("Error joining household:", error);
+      if (error.message === 'Invalid invite code') {
+        toast.error("Invalid invite code. Please check and try again.");
+      } else {
+        toast.error("Failed to join household. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateHousehold = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!currentUser) {
+      toast.error("You must be logged in to create a household");
+      navigate("/login");
+      return;
+    }
+
+    if (!householdName.trim()) {
+      toast.error("Please enter a household name");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { inviteCode } = await createHousehold(householdName.trim(), currentUser.uid);
+      await refreshUserData();
+      toast.success(`Household created! Your invite code is: ${inviteCode}`, {
+        duration: 8000,
+      });
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error creating household:", error);
+      toast.error("Failed to create household. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -28,44 +87,76 @@ export default function JoinHousehold() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
             <span className="text-3xl">🏠</span>
           </div>
-          <CardTitle className="text-2xl">Join a household</CardTitle>
+          <CardTitle className="text-2xl">Setup Your Household</CardTitle>
           <CardDescription>
-            Enter the invite code shared by your household member
+            Create a new household or join an existing one
           </CardDescription>
         </CardHeader>
-        
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="code">Invite Code</Label>
-              <Input
-                id="code"
-                type="text"
-                placeholder="ABC12345"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                maxLength={8}
-                className="text-center text-lg font-mono tracking-wider"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                8-character code provided by your household admin
-              </p>
-            </div>
 
-            <Button type="submit" className="w-full" variant="default">
-              Join Household
-            </Button>
-          </CardContent>
-        </form>
+        <CardContent>
+          <Tabs defaultValue="join" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="join">Join</TabsTrigger>
+              <TabsTrigger value="create">Create</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="join" className="space-y-4 mt-4">
+              <form onSubmit={handleJoinHousehold}>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="code">Invite Code</Label>
+                    <Input
+                      id="code"
+                      type="text"
+                      placeholder="ABC123"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                      maxLength={6}
+                      className="text-center text-lg font-mono tracking-wider"
+                      required
+                      disabled={loading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      6-character code provided by your household admin
+                    </p>
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Joining..." : "Join Household"}
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="create" className="space-y-4 mt-4">
+              <form onSubmit={handleCreateHousehold}>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Household Name</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="The Smith Family"
+                      value={householdName}
+                      onChange={(e) => setHouseholdName(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Choose a name for your household
+                    </p>
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Creating..." : "Create Household"}
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
 
         <CardFooter className="flex flex-col space-y-2">
-          <p className="text-center text-sm text-muted-foreground">
-            Don't have an invite code?{" "}
-            <Link to="/signup" className="font-medium text-primary hover:underline">
-              Create your own household
-            </Link>
-          </p>
           <p className="text-center text-sm text-muted-foreground">
             <Link to="/login" className="font-medium hover:underline">
               Back to login

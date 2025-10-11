@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
+import { getUser } from "@/services/userService";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -21,21 +22,28 @@ export default function Login() {
     setLoading(true);
     setError("");
     try {
-      await signIn(email, password);
-      navigate("/dashboard");
+      const result = await signIn(email, password);
+
+      // Check if user has a household
+      const userData = await getUser(result.user.uid);
+      if (userData?.household_id) {
+        navigate("/dashboard");
+      } else {
+        navigate("/join");
+      }
     } catch (error: any) {
-      // Extract user-friendly error message
-      const errorMessage = error.code === 'auth/invalid-credential'
-        ? 'Invalid email or password. Please check your credentials and try again.'
-        : error.code === 'auth/user-not-found'
-        ? 'No account found with this email. Please sign up first.'
-        : error.code === 'auth/wrong-password'
-        ? 'Incorrect password. Please try again.'
-        : error.code === 'auth/too-many-requests'
-        ? 'Too many failed attempts. Please try again later.'
-        : error.code === 'auth/network-request-failed'
-        ? 'Network error. Please check your connection and try again.'
-        : 'Failed to sign in. Please try again.';
+      // Error is already shown via toast in AuthContext, but we'll show it in the form too
+      let errorMessage = 'Failed to sign in. Please try again.';
+
+      if (error.code === 'auth/invalid-credential') {
+        errorMessage = 'This account uses a different sign-in method. Try "Sign in with Google" below.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. This account may use Google sign-in. Try the Google button below.';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email. Please sign up first.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      }
 
       setError(errorMessage);
       console.error("Login error:", error);
@@ -48,8 +56,15 @@ export default function Login() {
     setLoading(true);
     setError("");
     try {
-      await signInWithGoogle();
-      navigate("/dashboard");
+      const result = await signInWithGoogle();
+
+      // Check if user has a household
+      const userData = await getUser(result.user.uid);
+      if (userData?.household_id) {
+        navigate("/dashboard");
+      } else {
+        navigate("/join");
+      }
     } catch (error: any) {
       const errorMessage = error.code === 'auth/popup-closed-by-user'
         ? 'Sign-in popup was closed. Please try again.'

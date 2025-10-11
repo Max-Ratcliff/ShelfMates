@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read and write their own document
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+
+      // Users can read other users in the same household
+      allow read: if isAuthenticated() &&
+                     resource.data.household_id != null &&
+                     resource.data.household_id == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.household_id;
+    }
+
+    // Households collection
+    match /households/{householdId} {
+      // Any authenticated user can read any household (to join with invite code)
+      allow read: if isAuthenticated();
+
+      // Any authenticated user can create a household
+      allow create: if isAuthenticated();
+
+      // Only allow update/delete if you're checking the household exists
+      allow update, delete: if isAuthenticated();
+    }
+
+    // Items collection
+    match /items/{itemId} {
+      // For now, allow any authenticated user to read/write items
+      // We'll tighten this later once households are working
+      allow read, write: if isAuthenticated();
+    }
+
+    // Reminders collection (future use)
+    match /reminders/{reminderId} {
+      // Only allow server-side operations (Cloud Functions)
+      allow read, write: if false;
+    }
+  }
+}

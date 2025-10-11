@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { createOrUpdateUser } from '@/services/userService';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -43,14 +44,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   // Helper to get user-friendly error messages
-  const getAuthErrorMessage = (errorCode: string): string => {
+  const getAuthErrorMessage = (errorCode: string, email?: string): string => {
     switch (errorCode) {
       case 'auth/invalid-credential':
-        return 'Invalid email or password. Please check your credentials and try again.';
+        return email
+          ? `This account (${email}) uses a different sign-in method. Try signing in with Google or reset your password.`
+          : 'Invalid email or password. This account may use a different sign-in method (like Google).';
       case 'auth/user-not-found':
         return 'No account found with this email. Please sign up first.';
       case 'auth/wrong-password':
-        return 'Incorrect password. Please try again.';
+        return 'Incorrect password. This account may have been converted to Google sign-in. Try "Sign in with Google" instead.';
       case 'auth/email-already-in-use':
         return 'An account with this email already exists. Please sign in instead.';
       case 'auth/weak-password':
@@ -68,7 +71,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       case 'auth/cancelled-popup-request':
         return 'Sign-in was cancelled. Please try again.';
       case 'auth/account-exists-with-different-credential':
-        return 'An account already exists with this email using a different sign-in method.';
+        return 'An account already exists with this email using a different sign-in method. Try signing in with Google.';
       default:
         return 'An unexpected error occurred. Please try again.';
     }
@@ -78,6 +81,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signUp = async (email: string, password: string) => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
+
+      // Create user document in Firestore
+      await createOrUpdateUser(result.user.uid, {
+        name: result.user.displayName || email.split('@')[0],
+        email: result.user.email || email,
+        household_id: null,
+      });
+
       toast.success('Account created successfully!', {
         duration: 3000,
       });
@@ -100,9 +111,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
       return result;
     } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
+      const errorMessage = getAuthErrorMessage(error.code, email);
       toast.error(errorMessage, {
-        duration: 5000,
+        duration: 7000,
       });
       throw error;
     }
@@ -112,6 +123,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
+
+      // Create or update user document in Firestore
+      await createOrUpdateUser(result.user.uid, {
+        name: result.user.displayName || result.user.email?.split('@')[0] || 'User',
+        email: result.user.email || '',
+      });
+
       toast.success('Logged in with Google successfully!', {
         duration: 3000,
       });

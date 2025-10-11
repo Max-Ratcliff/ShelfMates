@@ -24,8 +24,8 @@ export default function SignUp() {
     setError("");
     try {
       await signUp(email, password);
-      // TODO: Save name and householdName to Firestore user profile
-      navigate("/dashboard");
+      // Redirect to household setup page
+      navigate("/join");
     } catch (error: any) {
       // Extract user-friendly error message
       const errorMessage = error.code === 'auth/email-already-in-use'
@@ -50,8 +50,8 @@ export default function SignUp() {
     setError("");
     try {
       await signInWithGoogle();
-      // TODO: Check if user needs to set up household name in Firestore
-      navigate("/dashboard");
+      // Redirect to household setup page
+      navigate("/join");
     } catch (error: any) {
       const errorMessage = error.code === 'auth/popup-closed-by-user'
         ? 'Sign-up popup was closed. Please try again.'

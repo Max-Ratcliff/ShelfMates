@@ -2,54 +2,28 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ItemCard, Item } from "@/components/items/ItemCard";
+import { ItemCard, Item as ItemCardType } from "@/components/items/ItemCard";
 import { AddItemModal } from "@/components/items/AddItemModal";
 import { toast } from "sonner";
-
-// Mock data - replace with Firebase
-const mockItems: Item[] = [
-  {
-    id: "1",
-    name: "Milk",
-    quantity: 2,
-    expiryDate: "2025-10-15",
-    isCommunal: true,
-  },
-  {
-    id: "2",
-    name: "Bread",
-    quantity: 1,
-    expiryDate: "2025-10-13",
-    isCommunal: false,
-    ownerName: "You",
-  },
-  {
-    id: "3",
-    name: "Yogurt",
-    quantity: 4,
-    expiryDate: "2025-10-12",
-    isCommunal: true,
-  },
-];
+import { useHousehold } from "@/contexts/HouseholdContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useItems, useFilteredItems } from "@/hooks/useItems";
+import { deleteItem as deleteItemService, Item } from "@/services/itemService";
 
 export default function Dashboard() {
   const location = useLocation();
-  const [items, setItems] = useState<Item[]>(mockItems);
+  const { currentUser } = useAuth();
+  const { householdId } = useHousehold();
+  const { items, loading } = useItems(householdId);
+  const { personalItems, communalItems, expiringItems } = useFilteredItems(
+    items,
+    currentUser?.uid || ''
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
   // Determine which view to show based on route
   const currentView = location.pathname.split('/')[1] || 'dashboard';
-
-  const personalItems = items.filter((item) => !item.isCommunal);
-  const communalItems = items.filter((item) => item.isCommunal);
-
-  const expiringItems = items.filter((item) => {
-    const expiry = new Date(item.expiryDate);
-    const today = new Date();
-    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return diffDays <= 7; // Show items expiring within a week
-  });
 
   // Determine which items to display and page title
   let displayItems: Item[] = [];
@@ -83,30 +57,25 @@ export default function Dashboard() {
       emptyMessage = "No personal items yet. Add your first item!";
   }
 
-  const handleSaveItem = (itemData: Omit<Item, "id">) => {
-    if (editingItem) {
-      setItems(items.map((item) =>
-        item.id === editingItem.id ? { ...itemData, id: item.id } : item
-      ));
-    } else {
-      const newItem: Item = {
-        ...itemData,
-        id: Date.now().toString(),
-      };
-      setItems([...items, newItem]);
-    }
+  const handleSaveItem = () => {
+    // This will be handled by AddItemModal now
     setIsModalOpen(false);
     setEditingItem(null);
   };
 
-  const handleEditItem = (item: Item) => {
-    setEditingItem(item);
+  const handleEditItem = (item: ItemCardType) => {
+    setEditingItem(item as Item);
     setIsModalOpen(true);
   };
 
-  const handleDeleteItem = (id: string) => {
-    setItems(items.filter((item) => item.id !== id));
-    toast.success("Item deleted successfully");
+  const handleDeleteItem = async (id: string) => {
+    try {
+      await deleteItemService(id);
+      toast.success("Item deleted successfully");
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      toast.error("Failed to delete item");
+    }
   };
 
   const EmptyState = ({ message }: { message: string }) => (
@@ -117,6 +86,29 @@ export default function Dashboard() {
       <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   );
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading items...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if no household
+  if (!householdId) {
+    return (
+      <div className="container mx-auto p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">You need to join a household first.</p>
+          <Button onClick={() => window.location.href = '/join'}>Join Household</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4 sm:p-6">
@@ -133,7 +125,7 @@ export default function Dashboard() {
             {displayItems.map((item) => (
               <ItemCard
                 key={item.id}
-                item={item}
+                item={item as ItemCardType}
                 onEdit={handleEditItem}
                 onDelete={handleDeleteItem}
               />
