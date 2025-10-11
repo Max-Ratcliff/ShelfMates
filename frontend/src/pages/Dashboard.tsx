@@ -50,6 +50,12 @@ export default function Dashboard() {
       pageDescription = "Items that need attention";
       emptyMessage = "No items expiring soon. Great job keeping things fresh!";
       break;
+    case 'balances':
+      displayItems = []; // plan to implement user balance cards
+      pageTitle = "Balances";
+      pageDescription = "Track who owes what in your household";
+      emptyMessage = "No balances to show.";
+      break;
     default:
       displayItems = personalItems;
       pageTitle = "My Shelf";
