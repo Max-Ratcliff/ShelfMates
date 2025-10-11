@@ -83,19 +83,19 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">My Dashboard</h1>
-        <p className="mt-2 text-muted-foreground">
+    <div className="container mx-auto p-4 sm:p-6">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Dashboard</h1>
+        <p className="mt-1 sm:mt-2 text-sm sm:text-base text-muted-foreground">
           Track and manage your household's food inventory
         </p>
       </div>
 
-      <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
-          <TabsTrigger value="personal">My Shelf</TabsTrigger>
-          <TabsTrigger value="shared">Shared</TabsTrigger>
-          <TabsTrigger value="expiring">Expiring</TabsTrigger>
+      <Tabs defaultValue="personal" className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-3 h-auto">
+          <TabsTrigger value="personal" className="text-xs sm:text-sm py-2">My Shelf</TabsTrigger>
+          <TabsTrigger value="shared" className="text-xs sm:text-sm py-2">Shared</TabsTrigger>
+          <TabsTrigger value="expiring" className="text-xs sm:text-sm py-2">Expiring</TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal" className="space-y-4">
@@ -153,11 +153,12 @@ export default function Dashboard() {
       {/* Floating Add Button */}
       <Button
         size="lg"
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-14 w-14 rounded-full shadow-lg touch-manipulation"
         onClick={() => {
           setEditingItem(null);
           setIsModalOpen(true);
         }}
+        aria-label="Add new item"
       >
         <Plus className="h-6 w-6" />
       </Button>

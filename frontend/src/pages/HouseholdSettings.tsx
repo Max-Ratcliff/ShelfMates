@@ -47,10 +47,10 @@ export default function HouseholdSettings() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Household Settings</h1>
-        <p className="mt-2 text-muted-foreground">
+    <div className="container mx-auto max-w-4xl p-4 sm:p-6">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Household Settings</h1>
+        <p className="mt-1 sm:mt-2 text-sm sm:text-base text-muted-foreground">
           Manage your household members and preferences
         </p>
       </div>
@@ -72,26 +72,30 @@ export default function HouseholdSettings() {
             
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Invite Code</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 rounded-md bg-muted px-4 py-2 font-mono text-lg font-semibold tracking-wider">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <code className="flex-1 rounded-md bg-muted px-3 sm:px-4 py-2.5 sm:py-2 font-mono text-base sm:text-lg font-semibold tracking-wider text-center sm:text-left">
                   {inviteCode}
                 </code>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopyCode}
-                  title="Copy code"
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleRegenerateCode}
-                  title="Regenerate code"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="default"
+                    onClick={handleCopyCode}
+                    className="flex-1 sm:flex-none touch-manipulation"
+                  >
+                    <Copy className="h-4 w-4 mr-2 sm:mr-0" />
+                    <span className="sm:hidden">Copy</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="default"
+                    onClick={handleRegenerateCode}
+                    className="flex-1 sm:flex-none touch-manipulation"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2 sm:mr-0" />
+                    <span className="sm:hidden">Regenerate</span>
+                  </Button>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 Share this code with household members to invite them
@@ -103,14 +107,14 @@ export default function HouseholdSettings() {
         {/* Members List */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
               <div>
                 <CardTitle>Household Members</CardTitle>
                 <CardDescription>
                   {mockHousehold.members.length} member(s) in this household
                 </CardDescription>
               </div>
-              <Button size="sm" className="gap-2">
+              <Button size="sm" className="gap-2 w-full sm:w-auto touch-manipulation">
                 <UserPlus className="h-4 w-4" />
                 Invite
               </Button>

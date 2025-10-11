@@ -46,13 +46,14 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
           <div className="flex-1 space-y-2">
             <div className="flex items-start justify-between">
               <h3 className="font-semibold text-foreground">{item.name}</h3>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                    className="h-9 w-9 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 touch-manipulation"
+                    aria-label="Item actions"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>

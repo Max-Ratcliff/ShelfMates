@@ -140,12 +140,25 @@ All colors MUST be HSL.
   .shadow-card {
     box-shadow: var(--shadow-card);
   }
-  
+
   .transition-base {
     transition: var(--transition-base);
   }
-  
+
   .transition-smooth {
     transition: var(--transition-smooth);
+  }
+
+  /* Mobile-optimized touch targets */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent text selection on buttons and interactive elements */
+  button, a {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
   }
 }

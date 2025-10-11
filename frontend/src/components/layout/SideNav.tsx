@@ -29,7 +29,7 @@ export function SideNav({ isOpen, onClose }: SideNavProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-64 transform border-r border-border bg-card transition-transform duration-300 md:sticky md:translate-x-0",
+          "fixed left-0 top-14 sm:top-16 z-40 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] w-64 transform border-r border-border bg-card transition-transform duration-300 md:sticky md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -37,7 +37,7 @@ export function SideNav({ isOpen, onClose }: SideNavProps) {
           {/* Mobile Close Button */}
           <div className="flex items-center justify-between p-4 md:hidden">
             <h2 className="text-lg font-semibold">Menu</h2>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 touch-manipulation" aria-label="Close menu">
               <X className="h-5 w-5" />
             </Button>
           </div>
@@ -51,7 +51,7 @@ export function SideNav({ isOpen, onClose }: SideNavProps) {
                 onClick={onClose}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors touch-manipulation",
                     isActive
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"

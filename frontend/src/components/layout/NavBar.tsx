@@ -15,31 +15,32 @@ interface NavBarProps {
 export function NavBar({ onMenuClick, householdName = "My Household" }: NavBarProps) {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-card shadow-sm">
-      <div className="flex h-16 items-center justify-between px-4 md:px-6">
-        <div className="flex items-center gap-4">
+      <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4 md:px-6">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden h-9 w-9 touch-manipulation flex-shrink-0"
             onClick={onMenuClick}
+            aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </Button>
-          
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <span className="text-xl font-bold text-primary-foreground">🥘</span>
+
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary flex-shrink-0">
+              <span className="text-lg sm:text-xl font-bold text-primary-foreground">🥘</span>
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground">ShelfMates</h1>
-              <p className="hidden text-xs text-muted-foreground sm:block">{householdName}</p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold text-foreground truncate">ShelfMates</h1>
+              <p className="hidden text-xs text-muted-foreground sm:block truncate">{householdName}</p>
             </div>
           </div>
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
+            <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 touch-manipulation flex-shrink-0" aria-label="User menu">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary">
                 <User className="h-5 w-5 text-secondary-foreground" />
               </div>
