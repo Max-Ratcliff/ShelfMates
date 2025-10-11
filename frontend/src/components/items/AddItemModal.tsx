@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Scan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { addItem, updateItem, Item as FirestoreItem } from "@/services/itemService";
+import { BarcodeScanner } from "./BarcodeScanner";
+import { ProductInfo } from "@/services/barcodeService";
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -44,6 +47,8 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
   const [isCommunal, setIsCommunal] = useState(true);
   const [emoji, setEmoji] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState<ProductInfo | null>(null);
 
   useEffect(() => {
     if (editItem) {
@@ -60,6 +65,23 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       setEmoji("");
     }
   }, [editItem, isOpen]);
+
+  const handleProductFound = (productData: {
+    name: string;
+    emoji: string;
+    expiryDate: string;
+    productInfo: ProductInfo;
+  }) => {
+    setName(productData.name);
+    setEmoji(productData.emoji);
+    setExpiryDate(productData.expiryDate);
+    setScannedProduct(productData.productInfo);
+    setShowScanner(false);
+    toast.success(`Found: ${productData.name}`, {
+      description: 'Review the details and click "Add Item" to save',
+      duration: 5000,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,21 +140,56 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{editItem ? "Edit Item" : "Add New Item"}</DialogTitle>
-            <DialogDescription>
-              {editItem
-                ? "Update the details of your food item"
-                : "Add a new item to your shelf"}
-            </DialogDescription>
-          </DialogHeader>
+    <>
+      {showScanner && (
+        <BarcodeScanner
+          onProductFound={handleProductFound}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="emoji">Emoji (Optional)</Label>
+      <Dialog open={isOpen && !showScanner} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleSubmit}>
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle>{editItem ? "Edit Item" : "Add New Item"}</DialogTitle>
+                  <DialogDescription>
+                    {editItem
+                      ? "Update the details of your food item"
+                      : "Add a new item to your shelf"}
+                  </DialogDescription>
+                </div>
+                {!editItem && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowScanner(true)}
+                    className="gap-2"
+                  >
+                    <Scan className="h-4 w-4" />
+                    Scan
+                  </Button>
+                )}
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {scannedProduct && (
+                <div className="rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-3">
+                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                    ✓ Product scanned successfully
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                    Review the details below and adjust if needed
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="emoji">Emoji (Optional)</Label>
               <div className="flex flex-wrap gap-2 p-3 border border-border rounded-md bg-muted/30 max-h-32 overflow-y-auto">
                 <button
                   type="button"
@@ -222,5 +279,6 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
