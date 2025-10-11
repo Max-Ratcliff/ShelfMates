@@ -31,7 +31,7 @@ def is_valid_invite_code(code: str) -> bool:
     pass
 
 
-def is_date_expired(expiry_date: date) -> bool:
+def is_date_expired(expiry_date: Optional[date]) -> bool:
     """
     Check if a date has passed
 
@@ -41,11 +41,13 @@ def is_date_expired(expiry_date: date) -> bool:
     Returns:
         bool: True if date has passed
     """
-    # TODO: Implement date expiration check
-    pass
+    if expiry_date is None:
+        return False
+    today = date.today()
+    return expiry_date < today
 
 
-def days_until_expiry(expiry_date: date) -> int:
+def days_until_expiry(expiry_date: Optional[date]) -> Optional[int]:
     """
     Calculate days until expiration
 
@@ -55,11 +57,14 @@ def days_until_expiry(expiry_date: date) -> int:
     Returns:
         int: Number of days until expiry (negative if expired)
     """
-    # TODO: Implement days until expiry calculation
-    pass
+    if expiry_date is None:
+        return None
+    today = date.today()
+    delta = expiry_date - today
+    return delta.days
 
 
-def is_expiring_soon(expiry_date: date, threshold_days: int = 3) -> bool:
+def is_expiring_soon(expiry_date: Optional[date], threshold_days: int = 3) -> bool:
     """
     Check if date is expiring within threshold
 
@@ -70,5 +75,9 @@ def is_expiring_soon(expiry_date: date, threshold_days: int = 3) -> bool:
     Returns:
         bool: True if expiring within threshold
     """
-    # TODO: Implement expiring soon check
-    pass
+    if expiry_date is None:
+        return False
+    days = days_until_expiry(expiry_date)
+    if days is None:
+        return False
+    return 0 <= days <= threshold_days

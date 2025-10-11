@@ -52,6 +52,7 @@ export const useFilteredItems = (items: Item[], userId: string) => {
   const communalItems = items.filter((item) => item.isCommunal);
 
   const expiringItems = items.filter((item) => {
+    if (!item.expiryDate) return false;
     const expiry = new Date(item.expiryDate);
     const today = new Date();
     const diffDays = Math.ceil(
@@ -61,6 +62,7 @@ export const useFilteredItems = (items: Item[], userId: string) => {
   });
 
   const expiredItems = items.filter((item) => {
+    if (!item.expiryDate) return false;
     const expiry = new Date(item.expiryDate);
     const today = new Date();
     return expiry < today;

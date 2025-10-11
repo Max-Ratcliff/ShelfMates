@@ -9,7 +9,7 @@ export interface Item {
   id: string;
   name: string;
   quantity: number;
-  expiryDate: string;
+  expiryDate?: string;
   isCommunal: boolean;
   ownerName?: string;
   emoji?: string;
@@ -22,7 +22,8 @@ interface ItemCardProps {
 }
 
 export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
-  const getExpiryStatus = (date: string) => {
+  const getExpiryStatus = (date?: string) => {
+    if (!date) return { label: "No expiry", color: "gray" };
     const expiry = new Date(date);
     const today = new Date();
     const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -78,7 +79,7 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
               <span>•</span>
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {new Date(item.expiryDate).toLocaleDateString()}
+                {item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : "No expiry"}
               </div>
             </div>
 
@@ -92,7 +93,7 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
                   status.color === "green" && "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30"
                 )}
               >
-                {status.label}
+          {status.label}
               </Badge>
 
               {item.isCommunal ? (
