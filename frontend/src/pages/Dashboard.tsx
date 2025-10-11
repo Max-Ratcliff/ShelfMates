@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemCard, Item } from "@/components/items/ItemCard";
 import { AddItemModal } from "@/components/items/AddItemModal";
 import { toast } from "sonner";
@@ -33,19 +33,55 @@ const mockItems: Item[] = [
 ];
 
 export default function Dashboard() {
+  const location = useLocation();
   const [items, setItems] = useState<Item[]>(mockItems);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
+  // Determine which view to show based on route
+  const currentView = location.pathname.split('/')[1] || 'dashboard';
+
   const personalItems = items.filter((item) => !item.isCommunal);
   const communalItems = items.filter((item) => item.isCommunal);
-  
+
   const expiringItems = items.filter((item) => {
     const expiry = new Date(item.expiryDate);
     const today = new Date();
     const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return diffDays <= 3;
+    return diffDays <= 7; // Show items expiring within a week
   });
+
+  // Determine which items to display and page title
+  let displayItems: Item[] = [];
+  let pageTitle = "";
+  let pageDescription = "";
+  let emptyMessage = "";
+
+  switch (currentView) {
+    case 'dashboard':
+      displayItems = personalItems;
+      pageTitle = "My Shelf";
+      pageDescription = "Your personal food inventory";
+      emptyMessage = "No personal items yet. Add your first item!";
+      break;
+    case 'shared':
+      displayItems = communalItems;
+      pageTitle = "Shared Shelf";
+      pageDescription = "Items shared with your household";
+      emptyMessage = "No shared items yet. Add communal items for your household!";
+      break;
+    case 'expiring':
+      displayItems = expiringItems;
+      pageTitle = "Expiring Soon";
+      pageDescription = "Items that need attention";
+      emptyMessage = "No items expiring soon. Great job keeping things fresh!";
+      break;
+    default:
+      displayItems = personalItems;
+      pageTitle = "My Shelf";
+      pageDescription = "Your personal food inventory";
+      emptyMessage = "No personal items yet. Add your first item!";
+  }
 
   const handleSaveItem = (itemData: Omit<Item, "id">) => {
     if (editingItem) {
@@ -85,70 +121,28 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto p-4 sm:p-6">
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{pageTitle}</h1>
         <p className="mt-1 sm:mt-2 text-sm sm:text-base text-muted-foreground">
-          Track and manage your household's food inventory
+          {pageDescription}
         </p>
       </div>
 
-      <Tabs defaultValue="personal" className="space-y-4 sm:space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-3 h-auto">
-          <TabsTrigger value="personal" className="text-xs sm:text-sm py-2">My Shelf</TabsTrigger>
-          <TabsTrigger value="shared" className="text-xs sm:text-sm py-2">Shared</TabsTrigger>
-          <TabsTrigger value="expiring" className="text-xs sm:text-sm py-2">Expiring</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="personal" className="space-y-4">
-          {personalItems.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {personalItems.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  onEdit={handleEditItem}
-                  onDelete={handleDeleteItem}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState message="No personal items yet. Add your first item!" />
-          )}
-        </TabsContent>
-
-        <TabsContent value="shared" className="space-y-4">
-          {communalItems.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {communalItems.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  onEdit={handleEditItem}
-                  onDelete={handleDeleteItem}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState message="No shared items yet. Add communal items for your household!" />
-          )}
-        </TabsContent>
-
-        <TabsContent value="expiring" className="space-y-4">
-          {expiringItems.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {expiringItems.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  onEdit={handleEditItem}
-                  onDelete={handleDeleteItem}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState message="No items expiring soon. Great job keeping things fresh!" />
-          )}
-        </TabsContent>
-      </Tabs>
+      <div className="space-y-4">
+        {displayItems.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {displayItems.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                onEdit={handleEditItem}
+                onDelete={handleDeleteItem}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState message={emptyMessage} />
+        )}
+      </div>
 
       {/* Floating Add Button */}
       <Button

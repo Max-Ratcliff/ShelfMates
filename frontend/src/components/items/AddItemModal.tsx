@@ -21,11 +21,23 @@ interface AddItemModalProps {
   editItem?: Item | null;
 }
 
+const commonEmojis = [
+  "🍎", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍑", "🥭",
+  "🥥", "🥝", "🍅", "🥑", "🥦", "🥬", "🥒", "🌶️", "🌽", "🥕",
+  "🥔", "🍠", "🧄", "🧅", "🥜", "🫘", "🍞", "🥐", "🥖", "🥨",
+  "🥯", "🧀", "🥚", "🍳", "🥓", "🥩", "🍗", "🍖", "🦴", "🌭",
+  "🍔", "🍟", "🍕", "🥪", "🥙", "🌮", "🌯", "🫔", "🥗", "🍝",
+  "🍜", "🍲", "🍛", "🍣", "🍱", "🥟", "🍤", "🍙", "🍚", "🍘",
+  "🥧", "🧁", "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩",
+  "🥛", "🍼", "☕", "🫖", "🧃", "🥤", "🧋", "🍷", "🍺", "🧊"
+];
+
 export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModalProps) {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [expiryDate, setExpiryDate] = useState("");
   const [isCommunal, setIsCommunal] = useState(false);
+  const [emoji, setEmoji] = useState("");
 
   useEffect(() => {
     if (editItem) {
@@ -33,11 +45,13 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       setQuantity(editItem.quantity);
       setExpiryDate(editItem.expiryDate);
       setIsCommunal(editItem.isCommunal);
+      setEmoji(editItem.emoji || "");
     } else {
       setName("");
       setQuantity(1);
       setExpiryDate("");
       setIsCommunal(false);
+      setEmoji("");
     }
   }, [editItem, isOpen]);
 
@@ -55,6 +69,7 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       expiryDate,
       isCommunal,
       ownerName: isCommunal ? undefined : "You",
+      emoji: emoji || undefined,
     });
 
     toast.success(editItem ? "Item updated successfully" : "Item added successfully");
@@ -75,6 +90,35 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="emoji">Emoji (Optional)</Label>
+              <div className="flex flex-wrap gap-2 p-3 border border-border rounded-md bg-muted/30 max-h-32 overflow-y-auto">
+                <button
+                  type="button"
+                  onClick={() => setEmoji("")}
+                  className={`w-10 h-10 flex items-center justify-center rounded-md border-2 transition-all hover:scale-110 ${
+                    emoji === "" ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
+                  }`}
+                  aria-label="No emoji"
+                >
+                  <span className="text-muted-foreground text-xs">None</span>
+                </button>
+                {commonEmojis.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setEmoji(e)}
+                    className={`w-10 h-10 flex items-center justify-center text-2xl rounded-md border-2 transition-all hover:scale-110 ${
+                      emoji === e ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
+                    }`}
+                    aria-label={`Select ${e} emoji`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Item Name</Label>
               <Input

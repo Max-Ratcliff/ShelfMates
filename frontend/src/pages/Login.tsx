@@ -1,22 +1,67 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { signIn, signInWithGoogle } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Firebase auth will go here
-    console.log("Login:", { email, password });
-    toast.success("Logged in successfully!");
-    navigate("/dashboard");
+    setLoading(true);
+    setError("");
+    try {
+      await signIn(email, password);
+      navigate("/dashboard");
+    } catch (error: any) {
+      // Extract user-friendly error message
+      const errorMessage = error.code === 'auth/invalid-credential'
+        ? 'Invalid email or password. Please check your credentials and try again.'
+        : error.code === 'auth/user-not-found'
+        ? 'No account found with this email. Please sign up first.'
+        : error.code === 'auth/wrong-password'
+        ? 'Incorrect password. Please try again.'
+        : error.code === 'auth/too-many-requests'
+        ? 'Too many failed attempts. Please try again later.'
+        : error.code === 'auth/network-request-failed'
+        ? 'Network error. Please check your connection and try again.'
+        : 'Failed to sign in. Please try again.';
+
+      setError(errorMessage);
+      console.error("Login error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await signInWithGoogle();
+      navigate("/dashboard");
+    } catch (error: any) {
+      const errorMessage = error.code === 'auth/popup-closed-by-user'
+        ? 'Sign-in popup was closed. Please try again.'
+        : error.code === 'auth/cancelled-popup-request'
+        ? 'Sign-in was cancelled. Please try again.'
+        : 'Failed to sign in with Google. Please try again.';
+
+      setError(errorMessage);
+      console.error("Google sign in error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,6 +77,13 @@ export default function Login() {
         
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -56,8 +108,8 @@ export default function Login() {
               />
             </div>
 
-            <Button type="submit" className="w-full">
-              Sign In
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
 
             <div className="relative">
@@ -69,7 +121,13 @@ export default function Login() {
               </div>
             </div>
 
-            <Button type="button" variant="outline" className="w-full">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

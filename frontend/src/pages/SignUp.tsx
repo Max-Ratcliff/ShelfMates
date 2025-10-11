@@ -1,24 +1,69 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [householdName, setHouseholdName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { signUp, signInWithGoogle } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Firebase auth will go here
-    console.log("Sign up:", { name, email, password, householdName });
-    toast.success("Account created successfully!");
-    navigate("/dashboard");
+    setLoading(true);
+    setError("");
+    try {
+      await signUp(email, password);
+      // TODO: Save name and householdName to Firestore user profile
+      navigate("/dashboard");
+    } catch (error: any) {
+      // Extract user-friendly error message
+      const errorMessage = error.code === 'auth/email-already-in-use'
+        ? 'An account with this email already exists. Please sign in instead.'
+        : error.code === 'auth/weak-password'
+        ? 'Password is too weak. Please use at least 6 characters.'
+        : error.code === 'auth/invalid-email'
+        ? 'Invalid email address. Please enter a valid email.'
+        : error.code === 'auth/operation-not-allowed'
+        ? 'Email/password sign-up is not enabled. Please contact support.'
+        : 'Failed to create account. Please try again.';
+
+      setError(errorMessage);
+      console.error("Sign up error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await signInWithGoogle();
+      // TODO: Check if user needs to set up household name in Firestore
+      navigate("/dashboard");
+    } catch (error: any) {
+      const errorMessage = error.code === 'auth/popup-closed-by-user'
+        ? 'Sign-up popup was closed. Please try again.'
+        : error.code === 'auth/cancelled-popup-request'
+        ? 'Sign-up was cancelled. Please try again.'
+        : 'Failed to sign up with Google. Please try again.';
+
+      setError(errorMessage);
+      console.error("Google sign up error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,6 +79,13 @@ export default function SignUp() {
         
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
@@ -85,8 +137,8 @@ export default function SignUp() {
               </p>
             </div>
 
-            <Button type="submit" className="w-full">
-              Create Account
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Creating account..." : "Create Account"}
             </Button>
 
             <div className="relative">
@@ -98,7 +150,13 @@ export default function SignUp() {
               </div>
             </div>
 
-            <Button type="button" variant="outline" className="w-full">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleSignUp}
+              disabled={loading}
+            >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
