@@ -17,7 +17,7 @@ import { db } from '@/lib/firebase';
 export interface ItemData {
   name: string;
   quantity: number;
-  expiryDate: string;
+  expiryDate?: string;
   isCommunal: boolean;
   ownerName?: string;
   ownerId: string;

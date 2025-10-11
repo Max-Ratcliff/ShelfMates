@@ -8,7 +8,7 @@ class ItemBase(BaseModel):
     """Base item model"""
     name: str
     quantity: int
-    expiry_date: date
+    expiry_date: Optional[date] = None
     is_communal: bool
 
 

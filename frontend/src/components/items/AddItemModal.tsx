@@ -81,7 +81,8 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       const itemData: any = {
         name: name.trim(),
         quantity,
-        expiryDate,
+        // only include expiryDate if user provided one
+        ...(expiryDate ? { expiryDate } : {}),
         isCommunal,
         ownerId: currentUser.uid,
         householdId,
@@ -190,7 +191,7 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
                 type="date"
                 value={expiryDate}
                 onChange={(e) => setExpiryDate(e.target.value)}
-                required
+                // expiry is optional
               />
             </div>
 
