@@ -1,7 +1,7 @@
 """Firebase configuration and initialization"""
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
-from .settings import settings
+from src.config.settings import settings
 
 
 def initialize_firebase():

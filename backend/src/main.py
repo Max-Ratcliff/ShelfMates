@@ -5,9 +5,9 @@ FastAPI application for managing shared household food inventory
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from .config.settings import settings
-from .config.firebase import initialize_firebase
-from .routes import auth, households, items
+from src.config.settings import settings
+from src.config.firebase import initialize_firebase
+from src.routes import auth, households, items, barcode
 
 
 # Initialize FastAPI app
@@ -34,6 +34,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(households.router, prefix="/api")
 app.include_router(items.router, prefix="/api")
+app.include_router(barcode.router, prefix="/api")
 
 
 @app.on_event("startup")

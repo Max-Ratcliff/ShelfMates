@@ -1,6 +1,6 @@
 """Food item service"""
 from typing import List, Optional
-from ..models.item import ItemCreate, ItemUpdate, ItemResponse, ItemFilter
+from src.models.item import ItemCreate, ItemUpdate, ItemResponse, ItemFilter
 
 
 async def create_item(item_data: ItemCreate, user_id: str, household_id: str) -> ItemResponse:

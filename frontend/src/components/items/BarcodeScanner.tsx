@@ -9,13 +9,17 @@ import {
   formatProductName,
   suggestEmojiFromProduct,
   estimateExpiryDate,
-  ProductInfo
+  ProductInfo,
+  ExpiryEstimation
 } from "@/services/barcodeService";
 
 interface BarcodeScannerProps {
   onProductFound: (productData: {
     name: string;
     emoji: string;
+    expiryDate: string;
+    expiryMessage?: string;
+    expiryConfidence?: 'high' | 'medium' | 'low' | 'none';
     productInfo: ProductInfo;
   }) => void;
   onClose: () => void;
@@ -70,9 +74,13 @@ export function BarcodeScanner({ onProductFound, onClose }: BarcodeScannerProps)
       }
 
       // Extract and format product data
+      const expiryEstimation = await estimateExpiryDate(product);
       const productData = {
         name: formatProductName(product),
         emoji: suggestEmojiFromProduct(product),
+        expiryDate: expiryEstimation.date,
+        expiryMessage: expiryEstimation.message,
+        expiryConfidence: expiryEstimation.confidence,
         productInfo: product,
       };
 

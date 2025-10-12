@@ -1,6 +1,6 @@
 """Household service"""
 from typing import List
-from ..models.household import (
+from src.models.household import (
     HouseholdCreate,
     HouseholdResponse,
     HouseholdMember,

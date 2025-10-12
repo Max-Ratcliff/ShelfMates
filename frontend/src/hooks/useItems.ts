@@ -53,7 +53,9 @@ export const useFilteredItems = (items: Item[], userId: string) => {
   const communalItems = items.filter((item) => item.isCommunal && !item.isGrocery);
 
   const expiringItems = items.filter((item) => {
-    if (!item.expiryDate) return false;
+    // Include items without expiry date to keep users aware
+    if (!item.expiryDate) return true;
+
     const expiry = new Date(item.expiryDate);
     const today = new Date();
     const diffDays = Math.ceil(
