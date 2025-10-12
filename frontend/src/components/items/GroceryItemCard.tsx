@@ -20,6 +20,11 @@ import { cn } from "@/lib/utils";
 import { updateItem } from "@/services/itemService";
 import { toast } from "sonner";
 import { formatNameWithInitial } from "@/lib/nameUtils";
+import { useHousehold } from "@/contexts/HouseholdContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { createExpense } from "@/services/expenseService";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export interface Item {
   id: string;
@@ -39,20 +44,78 @@ interface GroceryItemCardProps {
 export function GroceryItemCard({ item, onEdit, onDelete }: GroceryItemCardProps) {
   const [isChecked, setIsChecked] = useState(false);
   const [expiryDate, setExpiryDate] = useState("");
+  const [price, setPrice] = useState("");
+  const { householdId } = useHousehold();
+  const { currentUser } = useAuth();
 
   const handleContinue = async () => {
     if (!expiryDate) {
       toast.error("Please enter an expiry date");
       return;
     }
+    if (!price) {
+      toast.error("Please enter the price");
+      return;
+    }
+
+    const priceNumber = parseFloat(price);
+    if (isNaN(priceNumber) || priceNumber <= 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+
+    if (!householdId || !currentUser) {
+      toast.error("Missing household or user information");
+      return;
+    }
+
     try {
+      // Fetch household members
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("household_id", "==", householdId));
+      const querySnapshot = await getDocs(q);
+
+      const memberIds = querySnapshot.docs.map(doc => doc.id);
+
+      if (memberIds.length === 0) {
+        toast.error("No household members found");
+        return;
+      }
+
+      // Create expense with equal split
+      const totalCents = Math.round(priceNumber * 100);
+      const sharePerPerson = Math.floor(totalCents / memberIds.length);
+      const remainder = totalCents - (sharePerPerson * memberIds.length);
+
+      const entries = memberIds.map((memberId, index) => ({
+        userId: memberId,
+        amountCents: sharePerPerson + (index === 0 ? remainder : 0),
+        settledCents: 0
+      }));
+
+      // Current user is the payer (they bought it)
+      await createExpense({
+        householdId,
+        createdBy: currentUser.uid,
+        payerId: currentUser.uid,
+        totalCents,
+        note: item.name,
+        entries,
+        participants: memberIds
+      });
+
+      // Update the item to move it to shelf
       await updateItem(item.id, {
         expiryDate,
         isGrocery: false
       });
-      toast.success("Item moved to shelf!");
+
+      toast.success("Item moved to shelf and expense created!");
+      setPrice(""); // Reset price
+      setExpiryDate(""); // Reset expiry date
     } catch (error) {
-      toast.error("Failed to move item to shelf");
+      console.error("Error:", error);
+      toast.error("Failed to complete action");
     }
   };
 
@@ -69,24 +132,45 @@ export function GroceryItemCard({ item, onEdit, onDelete }: GroceryItemCardProps
                 <AlertDialogHeader>
                   <AlertDialogTitle>Did you buy this item?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Great! Now add it to your shelf with an expiry date so we can help you track it.
+                    Great! Let's add the details so we can track it and split the cost.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <div className="space-y-2">
-                  <label htmlFor="expiry-date" className="text-sm font-medium">Expiry Date</label>
-                  <Input
-                    id="expiry-date"
-                    type="date"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                    placeholder="Check package for expiry date"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    💡 Look for "Best By", "Use By", or "Expiration" date on the package
-                  </p>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="price" className="text-sm font-medium">Price ($)</label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      💰 The cost will be split equally among all household members
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="expiry-date" className="text-sm font-medium">Expiry Date</label>
+                    <Input
+                      id="expiry-date"
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      placeholder="Check package for expiry date"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      💡 Look for "Best By", "Use By", or "Expiration" date on the package
+                    </p>
+                  </div>
                 </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Not Yet</AlertDialogCancel>
+                  <AlertDialogCancel onClick={() => {
+                    setPrice("");
+                    setExpiryDate("");
+                    setIsChecked(false);
+                  }}>Not Yet</AlertDialogCancel>
                   <AlertDialogAction onClick={handleContinue}>Add to Shelf</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

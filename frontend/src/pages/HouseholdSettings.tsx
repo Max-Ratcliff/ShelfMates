@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Copy, RefreshCw, LogOut, UserPlus } from "lucide-react";
+import { Copy, RefreshCw, LogOut, UserPlus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import { useHousehold } from "@/contexts/HouseholdContext";
 import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { updateUserHousehold } from "@/services/userService";
+import { deleteAllExpenses } from "@/services/expenseService";
 
 interface HouseholdMember {
   id: string;
@@ -37,6 +39,8 @@ export default function HouseholdSettings() {
   const { householdData, householdId, userData, refreshUserData } = useHousehold();
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [leaveConfirmText, setLeaveConfirmText] = useState("");
 
   // Fetch household members
   useEffect(() => {
@@ -116,6 +120,19 @@ export default function HouseholdSettings() {
     } catch (error) {
       console.error("Error leaving household:", error);
       toast.error("Failed to leave household");
+    }
+  };
+
+  const handleClearAllExpenses = async () => {
+    if (!householdId) return;
+
+    try {
+      await deleteAllExpenses(householdId);
+      setDeleteConfirmText(""); // Reset confirmation text
+      toast.success("All expenses have been cleared");
+    } catch (error) {
+      console.error("Error clearing expenses:", error);
+      toast.error("Failed to clear expenses");
     }
   };
 
@@ -255,36 +272,115 @@ export default function HouseholdSettings() {
           <CardHeader>
             <CardTitle className="text-destructive">Danger Zone</CardTitle>
             <CardDescription>
-              Irreversible actions that affect your household membership
+              Irreversible actions that affect your household
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="gap-2">
-                  <LogOut className="h-4 w-4" />
-                  Leave Household
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    You will be removed from "{householdData.name}" and will lose access
-                    to all shared items. You'll need a new invite code to rejoin.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleLeaveHousehold}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Leave Household
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+          <CardContent className="space-y-4">
+            {/* Clear All Expenses */}
+            <div className="rounded-lg border border-destructive/50 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-semibold text-destructive">Clear All Expenses</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Permanently delete all grocery expenses and balances for this household
+                  </p>
+                </div>
+                <AlertDialog onOpenChange={(open) => !open && setDeleteConfirmText("")}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="gap-2 w-full sm:w-auto">
+                      <Trash2 className="h-4 w-4" />
+                      Clear Expenses
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear All Expenses</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete all expenses
+                        and reset all balances to zero for everyone in "{householdData.name}".
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="py-4">
+                      <p className="text-sm font-medium mb-2">
+                        To confirm, type <span className="font-mono font-bold">DELETE ALL EXPENSES</span> below:
+                      </p>
+                      <Input
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        placeholder="DELETE ALL EXPENSES"
+                        className="font-mono"
+                      />
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleClearAllExpenses}
+                        disabled={deleteConfirmText !== "DELETE ALL EXPENSES"}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                      >
+                        Clear All Expenses
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Leave Household */}
+            <div className="rounded-lg border border-destructive/50 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-semibold text-destructive">Leave Household</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Remove yourself from this household
+                  </p>
+                </div>
+                <AlertDialog onOpenChange={(open) => !open && setLeaveConfirmText("")}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="gap-2 w-full sm:w-auto">
+                      <LogOut className="h-4 w-4" />
+                      Leave Household
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Leave Household</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You will be removed from "{householdData.name}" and will lose access
+                        to all shared items and expenses. You'll need a new invite code to rejoin.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="py-4">
+                      <p className="text-sm font-medium mb-2">
+                        To confirm, type <span className="font-mono font-bold">LEAVE HOUSEHOLD</span> below:
+                      </p>
+                      <Input
+                        value={leaveConfirmText}
+                        onChange={(e) => setLeaveConfirmText(e.target.value)}
+                        placeholder="LEAVE HOUSEHOLD"
+                        className="font-mono"
+                      />
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setLeaveConfirmText("")}>
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleLeaveHousehold}
+                        disabled={leaveConfirmText !== "LEAVE HOUSEHOLD"}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                      >
+                        Leave Household
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

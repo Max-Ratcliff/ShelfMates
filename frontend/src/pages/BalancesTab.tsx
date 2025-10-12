@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ChevronDown, ChevronUp, Trash2, TrendingUp, TrendingDown, CheckCircle2 } from 'lucide-react';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { createPayment, updateExpense, deleteExpense, deleteAllExpenses } from '@/services/expenseService';
+import { createPayment, updateExpense, deleteExpense } from '@/services/expenseService';
 import { toast } from 'sonner';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -54,33 +55,20 @@ export default function BalancesTab() {
 
     // Subscribe to expenses for the household and keep a flat list (used to show per-member items)
     const unsub = subscribeToExpenses(householdId, (items) => {
-      console.log('Expenses subscription update:', items);
       setExpenses(items);
     });
 
     return () => unsub?.();
   }, [householdId]);
 
-  // Recompute net balances whenever expenses change
+  // Recompute pairwise balances between current user and each member
   useEffect(() => {
-    if (!members || members.length === 0) return;
-    // build a map of member id -> net cents
+    if (!members || members.length === 0 || !currentUser) return;
+
     const map: Record<string, number> = {};
     members.forEach((m) => (map[m.id] = 0));
 
-    console.log('Computing balances from expenses:', expenses);
-
     for (const exp of expenses) {
-      const payer = exp.payerId;
-      console.log('Processing expense:', {
-        note: exp.note,
-        payer,
-        totalCents: exp.totalCents,
-        participants: exp.participants,
-        entries: exp.entries
-      });
-
-      // If entries are present, use them. Otherwise, try to compute equal split.
       const entries = exp.entries && exp.entries.length ? exp.entries : (() => {
         const parts = exp.participants || [];
         const total = exp.totalCents || 0;
@@ -90,265 +78,362 @@ export default function BalancesTab() {
         return parts.map((uid: string, idx: number) => ({ userId: uid, amountCents: share + (idx === 0 ? remainder : 0) }));
       })();
 
-      console.log('Computed entries:', entries);
+      // For each member, calculate their balance relative to current user
+      for (const member of members) {
+        if (member.id === currentUser.uid) continue; // skip self
 
-      for (const entry of entries) {
-        if (!entry || !entry.userId) continue;
-        const uid = entry.userId;
-        const amt = entry.amountCents || 0;
-        const settled = entry.settledCents || 0;
-        const outstanding = Math.max(0, amt - settled);
+        const memberEntry = entries.find((e: any) => e.userId === member.id);
+        const currentUserEntry = entries.find((e: any) => e.userId === currentUser.uid);
 
-        console.log(`Entry for ${uid}:`, { amt, settled, outstanding, isPayer: uid === payer });
-
-        if (uid === payer) {
-          // payer's own entry: ignore their own share
-          continue;
+        // Case 1: Current user is payer, member is participant
+        if (exp.payerId === currentUser.uid && memberEntry) {
+          const memberOwes = (memberEntry.amountCents || 0) - (memberEntry.settledCents || 0);
+          map[member.id] = (map[member.id] || 0) + memberOwes; // positive = they owe me
         }
 
-        // participant owes outstanding; payer is owed outstanding
-        map[uid] = (map[uid] || 0) - outstanding;
-        map[payer] = (map[payer] || 0) + outstanding;
+        // Case 2: Member is payer, current user is participant
+        if (exp.payerId === member.id && currentUserEntry) {
+          const iOwe = (currentUserEntry.amountCents || 0) - (currentUserEntry.settledCents || 0);
+          map[member.id] = (map[member.id] || 0) - iOwe; // negative = I owe them
+        }
       }
     }
 
-    console.log('Final balance map:', map);
-
     // update members netCents in state
+    // positive = they owe me, negative = I owe them
     setMembers((prev) => prev.map((m) => ({ ...m, netCents: map[m.id] || 0 })));
-  }, [expenses]);
+  }, [expenses, currentUser, members.length]); // Re-run when members array length changes
 
   // Helper to get expenses related to a member (they owe or they are owed)
   const expensesForMember = (memberId: string) =>
     expenses.filter((exp: any) => exp.participants?.includes(memberId) || exp.payerId === memberId);
 
+  // Compute summary totals
+  // Positive netCents = they owe me
+  // Negative netCents = I owe them
+  const totalOwedToYou = members
+    .filter(m => m.netCents > 0)
+    .reduce((sum, m) => sum + m.netCents, 0);
+
+  const totalYouOwe = members
+    .filter(m => m.netCents < 0)
+    .reduce((sum, m) => sum + Math.abs(m.netCents), 0);
+
+  const netBalance = totalOwedToYou - totalYouOwe;
+
+  // Separate members into categories
+  const membersIOwe = members
+    .filter(m => m.netCents < 0)
+    .sort((a, b) => a.netCents - b.netCents); // Most negative (highest debt) first
+
+  const membersThatOweMe = members
+    .filter(m => m.netCents > 0)
+    .sort((a, b) => b.netCents - a.netCents); // Highest amount first
+
+  const settledMembers = members
+    .filter(m => m.netCents === 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Toggle for settled section
+  const [showSettled, setShowSettled] = useState(false);
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Grocery Balances</h2>
-        {/* Temporary button to clear all expenses - remove this after clearing */}
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button className="rounded bg-red-600 px-3 py-1 text-white text-sm hover:bg-red-700">
-              Clear All Expenses
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Clear All Expenses</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete ALL expenses from your household. This action cannot be undone. Are you absolutely sure?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-red-600 hover:bg-red-700"
-                onClick={async () => {
-                  try {
-                    const deletedCount = await deleteAllExpenses(householdId!);
-                    toast.success(`Cleared ${deletedCount} expenses`);
-                  } catch (err: any) {
-                    console.error('Failed to clear expenses', err);
-                    toast.error(`Failed to clear expenses: ${err?.message || err}`);
-                  }
-                }}
-              >
-                Clear All
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
 
-      <div className="space-y-3">
-        {members.map((m) => {
-          const memberExpenses = expensesForMember(m.id);
-          const oweAmount = m.netCents < 0 ? Math.abs(m.netCents) : 0;
-          const owedTo = m.netCents > 0 ? m.netCents : 0;
-          return (
-            <Card key={m.id} className="border">
-              <CardHeader className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-4">
-                  <Avatar>
-                    <AvatarFallback>{m.name.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{m.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {m.netCents > 0 ? `$${(owedTo/100).toFixed(2)} · they owe you` : m.netCents < 0 ? `$${(oweAmount/100).toFixed(2)} · you owe them` : `$0.00 · all settled`}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  className="rounded p-2"
-                  onClick={() => setExpanded((s) => ({ ...s, [m.id]: !s[m.id] }))}
-                  aria-label="Toggle member expenses"
-                >
-                  {expanded[m.id] ? <ChevronUp /> : <ChevronDown />}
-                </button>
-              </CardHeader>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">You Owe</p>
+                <p className="text-2xl font-bold text-destructive">${(totalYouOwe / 100).toFixed(2)}</p>
+              </div>
+              <TrendingDown className="h-8 w-8 text-destructive opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
 
-              {expanded[m.id] && (
-                <CardContent>
-                  {memberExpenses.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No current expenses for this member.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {memberExpenses.map((e: any) => (
-                        <div key={e.id} className="flex items-center justify-between rounded-md bg-muted/30 p-3">
-                          <div>
-                            <p className="font-medium">{e.note || 'Expense'}</p>
-                            {/* show per-entry outstanding info when applicable */}
-                            {currentUser && (() => {
-                              const myEntry = (e.entries || []).find((en: any) => en.userId === currentUser.uid);
-                              if (myEntry) {
-                                const owed = myEntry.amountCents || 0;
-                                const settled = myEntry.settledCents || 0;
-                                const outstanding = Math.max(0, owed - settled);
-                                return (
-                                  <p className="text-sm text-muted-foreground">{settled >= owed ? 'Settled' : `$${(outstanding/100).toFixed(2)} outstanding`}</p>
+        <Card className="border-green-500/30 bg-green-500/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Owed to You</p>
+                <p className="text-2xl font-bold text-green-600">${(totalOwedToYou / 100).toFixed(2)}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-600 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={netBalance === 0 ? "border-muted" : netBalance > 0 ? "border-green-500/30 bg-green-500/5" : "border-destructive/30 bg-destructive/5"}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Net Balance</p>
+                <p className={`text-2xl font-bold ${netBalance === 0 ? "text-muted-foreground" : netBalance > 0 ? "text-green-600" : "text-destructive"}`}>
+                  {netBalance === 0 ? "$0.00" : `${netBalance > 0 ? '+' : ''}$${(netBalance / 100).toFixed(2)}`}
+                </p>
+              </div>
+              {netBalance === 0 ? (
+                <CheckCircle2 className="h-8 w-8 text-muted-foreground opacity-50" />
+              ) : netBalance > 0 ? (
+                <TrendingUp className="h-8 w-8 text-green-600 opacity-50" />
+              ) : (
+                <TrendingDown className="h-8 w-8 text-destructive opacity-50" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Empty state */}
+      {members.length === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <CheckCircle2 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+            <p className="text-lg font-medium text-muted-foreground">No household members yet</p>
+            <p className="text-sm text-muted-foreground mt-1">Invite members to start tracking expenses</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All settled state */}
+      {members.length > 0 && totalYouOwe === 0 && totalOwedToYou === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <CheckCircle2 className="h-12 w-12 mx-auto text-green-600 mb-3" />
+            <p className="text-lg font-medium">All Settled!</p>
+            <p className="text-sm text-muted-foreground mt-1">Everyone has paid their share</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ACTION NEEDED SECTION - Debts you need to pay */}
+      {membersIOwe.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-destructive">⚠️ Action Needed</h3>
+            <Badge variant="destructive">{membersIOwe.length}</Badge>
+          </div>
+          {membersIOwe.map((m) => {
+            // Get expenses where I owe this member (they were the payer)
+            const relevantExpenses = expenses.filter(exp =>
+              exp.payerId === m.id &&
+              currentUser &&
+              exp.entries?.some((e: any) =>
+                e.userId === currentUser.uid &&
+                ((e.amountCents || 0) - (e.settledCents || 0)) > 0
+              )
+            );
+
+            const oweAmount = Math.abs(m.netCents);
+
+            return (
+              <Card key={m.id} className="border-destructive/30 bg-destructive/5">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-12 w-12 mt-1">
+                      <AvatarFallback className="bg-destructive text-destructive-foreground">
+                        {m.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex-1 min-w-0">
+                      {/* Header */}
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div>
+                          <p className="font-semibold text-lg">You Owe {m.name}</p>
+                          <p className="text-2xl font-bold text-destructive">${(oweAmount / 100).toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Inline Expense Chips */}
+                      {relevantExpenses.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {relevantExpenses.map((exp: any) => {
+                            const myEntry = exp.entries?.find((e: any) => e.userId === currentUser?.uid);
+                            const myOutstanding = myEntry
+                              ? (myEntry.amountCents || 0) - (myEntry.settledCents || 0)
+                              : 0;
+
+                            return (
+                              <Badge key={exp.id} variant="outline" className="px-3 py-1 text-sm border-destructive/30">
+                                {exp.note || 'Expense'} ${(myOutstanding / 100).toFixed(2)}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Action Button */}
+                      <div className="flex justify-end">
+                        <button
+                          className="inline-flex items-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
+                          onClick={async () => {
+                            if (!currentUser || !householdId) return;
+
+                            try {
+                              // Mark all outstanding expenses with this person as paid
+                              for (const exp of relevantExpenses) {
+                                const myEntry = exp.entries?.find((e: any) => e.userId === currentUser.uid);
+                                if (!myEntry) continue;
+
+                                const outstanding = (myEntry.amountCents || 0) - (myEntry.settledCents || 0);
+                                if (outstanding <= 0) continue;
+
+                                await createPayment({
+                                  householdId: householdId,
+                                  fromUser: currentUser.uid,
+                                  toUser: exp.payerId,
+                                  totalCents: outstanding,
+                                  appliesTo: [{ expenseId: exp.id, userId: currentUser.uid, amountCents: outstanding }],
+                                });
+
+                                const updatedEntries = exp.entries.map((en: any) => {
+                                  if (en.userId === currentUser.uid) {
+                                    return { ...en, settledCents: (en.settledCents || 0) + outstanding };
+                                  }
+                                  return en;
+                                });
+
+                                const allSettled = updatedEntries.every((en: any) =>
+                                  (en.settledCents || 0) >= (en.amountCents || 0)
                                 );
-                              }
-                              return null;
-                            })()}
-                          </div>
-                          <div className="text-right">
-                            {/* Show individual amount for current user, or total if they're the payer */}
-                            {currentUser && (() => {
-                              const myEntry = (e.entries || []).find((en: any) => en.userId === currentUser.uid);
-                              if (myEntry) {
-                                const owed = myEntry.amountCents || 0;
-                                return (
-                                  <p className="font-semibold">${(owed/100).toFixed(2)}</p>
-                                );
-                              } else if (currentUser.uid === e.payerId) {
-                                // Show total for the payer
-                                return (
-                                  <p className="font-semibold">${(e.totalCents/100).toFixed(2)}</p>
-                                );
-                              }
-                              return null;
-                            })()}
-                            <p className="text-sm text-muted-foreground">{e.status}</p>
-                            {/* show mark-as-paid button if currentUser owes and there is outstanding amount */}
-                            {currentUser && currentUser.uid === m.id && (() => {
-                              const myEntry = (e.entries || []).find((en: any) => en.userId === currentUser.uid);
-                              if (myEntry) {
-                                const owed = myEntry.amountCents || 0;
-                                const settled = myEntry.settledCents || 0;
-                                const outstanding = Math.max(0, owed - settled);
-                                
-                                if (outstanding > 0) {
-                                  return (
-                                    <>
-                                      <button
-                                        className="mt-2 inline-flex items-center gap-2 rounded bg-primary px-3 py-1 text-white"
-                                        onClick={async () => {
-                                          try {
-                                            // create a payment record from current user to the payer
-                                            await createPayment({
-                                              householdId: householdId!,
-                                              fromUser: currentUser.uid,
-                                              toUser: e.payerId,
-                                              totalCents: outstanding,
-                                              appliesTo: [{ expenseId: e.id, userId: currentUser.uid, amountCents: outstanding }],
-                                            });
 
-                                            // Update only settledCents for current user's entry
-                                            const updatedEntries = (e.entries || []).map((en: any) => {
-                                              if (en.userId === currentUser.uid) {
-                                                return { ...en, settledCents: (en.settledCents || 0) + outstanding };
-                                              }
-                                              return en;
-                                            });
-
-                                            // Check if ALL entries are fully settled
-                                            const allSettled = updatedEntries.every((en: any) => 
-                                              (en.settledCents || 0) >= (en.amountCents || 0)
-                                            );
-
-                                            if (allSettled) {
-                                              // Everyone has paid — remove the expense entirely
-                                              try {
-                                                await deleteExpense(householdId!, e.id);
-                                                toast.success('Expense fully settled and removed');
-                                              } catch (delErr: any) {
-                                                console.error('Failed to delete settled expense', delErr);
-                                                toast.error(`Failed to remove expense: ${delErr?.message || delErr}`);
-                                              }
-                                            } else {
-                                              // Partial settlement — update entries only, keep totalCents unchanged
-                                              await updateExpense(householdId!, e.id, { 
-                                                entries: updatedEntries, 
-                                                status: 'partially_settled' 
-                                              } as any);
-                                              toast.success('Payment recorded');
-                                            }
-                                          } catch (err: any) {
-                                            console.error('Failed to mark paid', err);
-                                            toast.error(`Failed to record payment: ${err?.message || err}`);
-                                          }
-                                        }}
-                                      >
-                                        Mark as paid
-                                      </button>
-                                      {/* Show delete button only if current user created the expense and is viewing their own card */}
-                                      {currentUser.uid === e.createdBy && currentUser.uid === m.id && (
-                                        <AlertDialog>
-                                          <AlertDialogTrigger asChild>
-                                            <button
-                                              className="mt-2 ml-2 inline-flex items-center gap-2 rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700"
-                                              aria-label="Delete expense"
-                                            >
-                                              <Trash2 size={14} />
-                                              Delete
-                                            </button>
-                                          </AlertDialogTrigger>
-                                          <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                              <AlertDialogTitle>Delete Expense</AlertDialogTitle>
-                                              <AlertDialogDescription>
-                                                Are you sure you want to delete this expense? This action cannot be undone and will remove the expense from everyone's balance.
-                                              </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                              <AlertDialogAction
-                                                className="bg-red-600 hover:bg-red-700"
-                                                onClick={async () => {
-                                                  try {
-                                                    await deleteExpense(householdId!, e.id);
-                                                    toast.success('Expense deleted successfully');
-                                                  } catch (err: any) {
-                                                    console.error('Failed to delete expense', err);
-                                                    toast.error(`Failed to delete expense: ${err?.message || err}`);
-                                                  }
-                                                }}
-                                              >
-                                                Delete
-                                              </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                          </AlertDialogContent>
-                                        </AlertDialog>
-                                      )}
-                                    </>
-                                  );
+                                if (allSettled) {
+                                  await deleteExpense(householdId, exp.id);
+                                } else {
+                                  await updateExpense(householdId, exp.id, {
+                                    entries: updatedEntries,
+                                    status: 'partially_settled'
+                                  } as any);
                                 }
                               }
-                              return null;
-                            })()}
-                          </div>
-                        </div>
-                      ))}
+
+                              toast.success(`Paid $${(oweAmount / 100).toFixed(2)} to ${m.name}`);
+                            } catch (err: any) {
+                              console.error('Failed to mark paid', err);
+                              toast.error(`Failed to record payment: ${err?.message || err}`);
+                            }
+                          }}
+                        >
+                          Mark All Paid
+                        </button>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </CardContent>
-              )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* AWAITING PAYMENT SECTION - Money owed to you */}
+      {membersThatOweMe.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-green-600">💰 Awaiting Payment</h3>
+            <Badge className="bg-green-600 hover:bg-green-700">{membersThatOweMe.length}</Badge>
+          </div>
+          {membersThatOweMe.map((m) => {
+            // Get expenses where this member owes me (I was the payer)
+            const relevantExpenses = expenses.filter(exp =>
+              exp.payerId === currentUser?.uid &&
+              exp.entries?.some((e: any) =>
+                e.userId === m.id &&
+                ((e.amountCents || 0) - (e.settledCents || 0)) > 0
+              )
+            );
+
+            const owedAmount = m.netCents;
+
+            return (
+              <Card key={m.id} className="border-green-500/30 bg-green-500/5">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-12 w-12 mt-1">
+                      <AvatarFallback className="bg-green-600 text-white">
+                        {m.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex-1 min-w-0">
+                      {/* Header */}
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div>
+                          <p className="font-semibold text-lg">{m.name} Owes You</p>
+                          <p className="text-2xl font-bold text-green-600">${(owedAmount / 100).toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Inline Expense Chips */}
+                      {relevantExpenses.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {relevantExpenses.map((exp: any) => {
+                            const theirEntry = exp.entries?.find((e: any) => e.userId === m.id);
+                            const theirOutstanding = theirEntry
+                              ? (theirEntry.amountCents || 0) - (theirEntry.settledCents || 0)
+                              : 0;
+
+                            return (
+                              <Badge key={exp.id} variant="outline" className="px-3 py-1 text-sm border-green-500/30">
+                                {exp.note || 'Expense'} ${(theirOutstanding / 100).toFixed(2)}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Future: Send Reminder Button */}
+                      <div className="flex justify-end">
+                        <p className="text-sm text-muted-foreground italic">Waiting for payment...</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* SETTLED SECTION - Collapsed by default */}
+      {settledMembers.length > 0 && (
+        <div className="space-y-3">
+          <button
+            onClick={() => setShowSettled(!showSettled)}
+            className="flex items-center gap-2 w-full text-left hover:opacity-80 transition-opacity"
+          >
+            <h3 className="text-lg font-semibold text-muted-foreground">✅ All Settled</h3>
+            <Badge variant="secondary">{settledMembers.length}</Badge>
+            {showSettled ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
+          </button>
+
+          {showSettled && settledMembers.map((m) => (
+            <Card key={m.id} className="border-muted">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-muted text-muted-foreground">
+                      {m.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="font-medium">{m.name}</p>
+                    <p className="text-sm text-muted-foreground">$0.00 · All settled</p>
+                  </div>
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                </div>
+              </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

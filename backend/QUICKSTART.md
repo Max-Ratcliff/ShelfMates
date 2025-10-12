@@ -51,9 +51,14 @@ gcloud auth configure-docker
 
 ## After Deployment
 
-1. **Get your backend URL** (shown at end of deploy.sh)
+⚠️ **IMPORTANT**: Your backend URL is **STABLE** and won't change between deploys!
 
-2. **Add to Vercel** environment variables:
+1. **Get your backend URL**:
+   ```bash
+   ./get-backend-url.sh
+   ```
+
+2. **Add to Vercel** environment variables (ONLY FIRST TIME):
    ```
    VITE_API_URL=https://your-backend-url.run.app
    ```
@@ -67,6 +72,14 @@ gcloud auth configure-docker
    ```bash
    curl https://your-backend-url.run.app/health
    ```
+
+### Optional: Custom Domain
+
+Want to use `api.shelfmates.com` instead of the Cloud Run URL?
+
+```bash
+./setup-custom-domain.sh
+```
 
 ## Common Commands
 

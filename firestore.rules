@@ -105,11 +105,12 @@ service cloud.firestore {
                        request.resource.data.ownerId == request.auth.uid;
 
       // Users can update items in their household
-      // Can update own items or communal items
+      // Can update own items, communal items, or grocery items (since anyone can check them off)
       allow update: if isAuthenticated() &&
                        resource.data.householdId == userHouseholdId() &&
                        (resource.data.ownerId == request.auth.uid ||
-                        resource.data.isCommunal == true);
+                        resource.data.isCommunal == true ||
+                        resource.data.isGrocery == true);
 
       // Users can delete their own items or communal items in their household
       allow delete: if isAuthenticated() &&

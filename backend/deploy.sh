@@ -41,6 +41,16 @@ SECRET_KEY: ${SECRET_KEY}
 ALLOWED_ORIGINS: https://shelf-mates.vercel.app,http://localhost:8080,http://localhost:5173
 EOF
 
+# Check if service exists
+echo "🔍 Checking if service exists..."
+if gcloud run services describe ${SERVICE_NAME} --region ${REGION} &> /dev/null; then
+  echo "📦 Service exists, updating..."
+  EXISTING_URL=$(gcloud run services describe ${SERVICE_NAME} --region ${REGION} --format 'value(status.url)')
+  echo "   Current URL: ${EXISTING_URL}"
+else
+  echo "🆕 Service doesn't exist, creating..."
+fi
+
 # Deploy to Cloud Run
 echo "🌐 Deploying to Cloud Run..."
 gcloud run deploy ${SERVICE_NAME} \
@@ -65,7 +75,10 @@ SERVICE_URL=$(gcloud run services describe ${SERVICE_NAME} --region ${REGION} --
 echo "✅ Deployment successful!"
 echo "🎉 Backend is live at: ${SERVICE_URL}"
 echo ""
-echo "📝 Next steps:"
+echo "⚠️  IMPORTANT: This URL is STABLE and should NOT change between deploys!"
+echo "   Only update Vercel if this is your first deployment or if you deleted the service."
+echo ""
+echo "📝 Next steps (ONLY IF FIRST DEPLOYMENT):"
 echo "1. Add this to Vercel environment variables:"
 echo "   VITE_API_URL=${SERVICE_URL}"
 echo ""
@@ -76,3 +89,6 @@ echo "3. Redeploy your Vercel app to apply the changes"
 echo ""
 echo "🌐 Your app: https://shelf-mates.vercel.app"
 echo "📚 API docs: ${SERVICE_URL}/api/docs"
+echo ""
+echo "💡 Pro tip: To use a custom domain (e.g., api.shelfmates.com), run:"
+echo "   ./setup-custom-domain.sh"

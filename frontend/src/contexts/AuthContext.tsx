@@ -21,7 +21,7 @@ import { createOrUpdateUser } from '@/services/userService';
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<UserCredential>;
+  signUp: (email: string, password: string, name?: string) => Promise<UserCredential>;
   signIn: (email: string, password: string) => Promise<UserCredential>;
   signInWithGoogle: () => Promise<UserCredential>;
   logout: () => Promise<void>;
@@ -80,13 +80,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Sign up with email and password
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name?: string) => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
 
       // Create user document in Firestore
       await createOrUpdateUser(result.user.uid, {
-        name: result.user.displayName || email.split('@')[0],
+        name: name || result.user.displayName || email.split('@')[0],
         email: result.user.email || email,
         household_id: null,
       });

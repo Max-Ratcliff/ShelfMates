@@ -23,7 +23,6 @@ export const useItems = (householdId: string | null | undefined) => {
     const unsubscribe = subscribeToItems(
       householdId,
       (updatedItems) => {
-        console.log("Received updated items:", updatedItems);
         setItems(updatedItems);
         setLoading(false);
       },

@@ -32,7 +32,7 @@ export default function SignUp() {
     setLoading(true);
     setError("");
     try {
-      await signUp(email, password);
+      await signUp(email, password, name.trim());
       // Redirect to household setup page
       navigate("/join");
     } catch (error: any) {
