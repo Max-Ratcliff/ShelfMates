@@ -2,6 +2,8 @@
  * Service for fetching product information from barcodes using Open Food Facts API
  */
 
+import API_BASE_URL from '../config/api';
+
 export interface ExpiryEstimation {
   date: string;
   message?: string; // User-friendly message explaining why date is blank or estimated
@@ -107,7 +109,7 @@ async function fetchFromUPCDatabase(barcode: string): Promise<ProductInfo | null
   try {
     // Use backend proxy to bypass CORS
     const response = await fetch(
-      `http://localhost:8000/api/barcode/upc/${barcode}`,
+      `${API_BASE_URL}/api/barcode/upc/${barcode}`,
       {
         headers: {
           'Content-Type': 'application/json',
