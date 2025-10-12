@@ -12,16 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Item } from "./ItemCard";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,7 +20,7 @@ import { addItem, updateItem, Item as FirestoreItem } from "@/services/itemServi
 import { BarcodeScanner } from "./BarcodeScanner";
 import { ProductInfo } from "@/services/barcodeService";
 
-interface AddItemModalProps {
+interface AddGroceryItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave?: (item: Omit<Item, "id">) => void;
@@ -48,73 +38,59 @@ const commonEmojis = [
   "🥛", "🍼", "☕", "🫖", "🧃", "🥤", "🧋", "🍷", "🍺", "🧊"
 ];
 
-export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModalProps) {
+export function AddGroceryItemModal({ isOpen, onClose, onSave, editItem }: AddGroceryItemModalProps) {
   const { currentUser } = useAuth();
   const { householdId, userData } = useHousehold();
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [expiryDate, setExpiryDate] = useState("");
   const [isCommunal, setIsCommunal] = useState(true);
   const [emoji, setEmoji] = useState("");
   const [saving, setSaving] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<ProductInfo | null>(null);
-  const [showExpiryWarning, setShowExpiryWarning] = useState(false);
-  const [expiryMessage, setExpiryMessage] = useState<string>('');
 
   useEffect(() => {
     if (editItem) {
       setName(editItem.name);
       setQuantity(editItem.quantity);
-      setExpiryDate(editItem.expiryDate);
       setIsCommunal(editItem.isCommunal);
       setEmoji(editItem.emoji || "");
-      setExpiryMessage("");
     } else {
       setName("");
       setQuantity(1);
-      setExpiryDate("");
       setIsCommunal(true);
       setEmoji("");
-      setExpiryMessage("");
     }
   }, [editItem, isOpen]);
 
   const handleProductFound = (productData: {
     name: string;
     emoji: string;
-    expiryDate: string;
-    expiryMessage?: string;
-    expiryConfidence?: 'high' | 'medium' | 'low' | 'none';
     productInfo: ProductInfo;
   }) => {
     setName(productData.name);
     setEmoji(productData.emoji);
-    setExpiryDate(productData.expiryDate);
-    setExpiryMessage(productData.expiryMessage || '');
     setScannedProduct(productData.productInfo);
     setShowScanner(false);
-
-    // Show appropriate toast based on expiry detection confidence
-    if (productData.expiryConfidence === 'none' || !productData.expiryDate) {
-      toast.success(`Found: ${productData.name}`, {
-        description: productData.expiryMessage || 'Please enter expiry date manually',
-        duration: 7000,
-      });
-    } else if (productData.expiryConfidence === 'medium' || productData.expiryConfidence === 'low') {
-      toast.success(`Found: ${productData.name}`, {
-        description: productData.expiryMessage || 'Expiry date estimated - please verify',
-        duration: 6000,
-      });
-    } else {
-      toast.success(`Found: ${productData.name}`, {
-        description: 'Review the details and click "Add Item" to save',
-        duration: 5000,
-      });
-    }
+    toast.success(`Found: ${productData.name}`, {
+      description: 'Review the details and click "Add Item" to save',
+      duration: 5000,
+    });
   };
 
-  const saveItem = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!name.trim()) {
+      toast.error("Please enter an item name");
+      return;
+    }
+
+    if (!currentUser || !householdId) {
+      toast.error("You must be logged in and part of a household");
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -122,10 +98,8 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       const itemData: any = {
         name: name.trim(),
         quantity,
-        // only include expiryDate if user provided one
-        ...(expiryDate ? { expiryDate } : {}),
         isCommunal,
-        isGrocery: false,
+        isGrocery: true,
         ownerId: currentUser.uid,
         householdId,
       };
@@ -158,33 +132,6 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!name.trim()) {
-      toast.error("Please enter an item name");
-      return;
-    }
-
-    if (!currentUser || !householdId) {
-      toast.error("You must be logged in and part of a household");
-      return;
-    }
-
-    // Check if expiry date is blank (and not editing an existing item)
-    if (!expiryDate && !editItem) {
-      setShowExpiryWarning(true);
-      return;
-    }
-
-    await saveItem();
-  };
-
-  const handleConfirmNoExpiry = async () => {
-    setShowExpiryWarning(false);
-    await saveItem();
   };
 
   return (
@@ -288,35 +235,13 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="expiry">Expiry Date (Optional)</Label>
-              <Input
-                id="expiry"
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                placeholder="Check package for 'Best By' date"
-              />
-              {expiryMessage ? (
-                <div className="rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-2">
-                  <p className="text-xs text-amber-900 dark:text-amber-100">
-                    ℹ️ {expiryMessage}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  💡 Tip: Look for "Best By", "Use By", or "Expiration" date on the package
-                </p>
-              )}
-            </div>
-
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="space-y-0.5">
                 <Label htmlFor="communal" className="cursor-pointer">
-                  Communal Item
+                  Communal Grocery
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Available to all household members
+                  Share with everyone
                 </p>
               </div>
               <Switch
@@ -338,26 +263,6 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
         </form>
       </DialogContent>
     </Dialog>
-
-    {/* Confirmation dialog for items without expiry date */}
-    <AlertDialog open={showExpiryWarning} onOpenChange={setShowExpiryWarning}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>No expiration date?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Items without expiration dates will appear in "Expiring Soon" to help you keep track of them.
-            <br /><br />
-            Are you sure you want to continue without adding an expiration date?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Go Back</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmNoExpiry}>
-            Continue Without Date
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }
