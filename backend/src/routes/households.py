@@ -1,14 +1,14 @@
 """Household routes"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
-from ..models.household import (
+from src.models.household import (
     HouseholdCreate,
     HouseholdResponse,
     HouseholdMember,
     InviteCodeRequest,
     RegenerateInviteCodeResponse
 )
-from ..services import household_service
+from src.services import household_service
 
 
 router = APIRouter(prefix="/households", tags=["Households"])

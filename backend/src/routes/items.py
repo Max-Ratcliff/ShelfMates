@@ -1,8 +1,8 @@
 """Food item routes"""
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
-from ..models.item import ItemCreate, ItemUpdate, ItemResponse, ItemFilter
-from ..services import item_service
+from src.models.item import ItemCreate, ItemUpdate, ItemResponse, ItemFilter
+from src.services import item_service
 
 
 router = APIRouter(prefix="/items", tags=["Items"])

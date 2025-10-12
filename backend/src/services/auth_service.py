@@ -1,6 +1,6 @@
 """Authentication service"""
 from typing import Optional
-from ..models.user import UserCreate, UserLogin, UserResponse, Token
+from src.models.user import UserCreate, UserLogin, UserResponse, Token
 
 
 async def register_user(user_data: UserCreate) -> UserResponse:

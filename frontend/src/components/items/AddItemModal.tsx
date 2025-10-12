@@ -12,6 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Item } from "./ItemCard";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,6 +59,8 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
   const [saving, setSaving] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<ProductInfo | null>(null);
+  const [showExpiryWarning, setShowExpiryWarning] = useState(false);
+  const [expiryMessage, setExpiryMessage] = useState<string>('');
 
   useEffect(() => {
     if (editItem) {
@@ -57,12 +69,14 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       setExpiryDate(editItem.expiryDate);
       setIsCommunal(editItem.isCommunal);
       setEmoji(editItem.emoji || "");
+      setExpiryMessage("");
     } else {
       setName("");
       setQuantity(1);
       setExpiryDate("");
       setIsCommunal(true);
       setEmoji("");
+      setExpiryMessage("");
     }
   }, [editItem, isOpen]);
 
@@ -70,32 +84,37 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
     name: string;
     emoji: string;
     expiryDate: string;
+    expiryMessage?: string;
+    expiryConfidence?: 'high' | 'medium' | 'low' | 'none';
     productInfo: ProductInfo;
   }) => {
     setName(productData.name);
     setEmoji(productData.emoji);
     setExpiryDate(productData.expiryDate);
+    setExpiryMessage(productData.expiryMessage || '');
     setScannedProduct(productData.productInfo);
     setShowScanner(false);
-    toast.success(`Found: ${productData.name}`, {
-      description: 'Review the details and click "Add Item" to save',
-      duration: 5000,
-    });
+
+    // Show appropriate toast based on expiry detection confidence
+    if (productData.expiryConfidence === 'none' || !productData.expiryDate) {
+      toast.success(`Found: ${productData.name}`, {
+        description: productData.expiryMessage || 'Please enter expiry date manually',
+        duration: 7000,
+      });
+    } else if (productData.expiryConfidence === 'medium' || productData.expiryConfidence === 'low') {
+      toast.success(`Found: ${productData.name}`, {
+        description: productData.expiryMessage || 'Expiry date estimated - please verify',
+        duration: 6000,
+      });
+    } else {
+      toast.success(`Found: ${productData.name}`, {
+        description: 'Review the details and click "Add Item" to save',
+        duration: 5000,
+      });
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!name.trim()) {
-      toast.error("Please enter an item name");
-      return;
-    }
-
-    if (!currentUser || !householdId) {
-      toast.error("You must be logged in and part of a household");
-      return;
-    }
-
+  const saveItem = async () => {
     setSaving(true);
 
     try {
@@ -138,6 +157,33 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!name.trim()) {
+      toast.error("Please enter an item name");
+      return;
+    }
+
+    if (!currentUser || !householdId) {
+      toast.error("You must be logged in and part of a household");
+      return;
+    }
+
+    // Check if expiry date is blank (and not editing an existing item)
+    if (!expiryDate && !editItem) {
+      setShowExpiryWarning(true);
+      return;
+    }
+
+    await saveItem();
+  };
+
+  const handleConfirmNoExpiry = async () => {
+    setShowExpiryWarning(false);
+    await saveItem();
   };
 
   return (
@@ -242,14 +288,25 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="expiry">Expiry Date</Label>
+              <Label htmlFor="expiry">Expiry Date (Optional)</Label>
               <Input
                 id="expiry"
                 type="date"
                 value={expiryDate}
                 onChange={(e) => setExpiryDate(e.target.value)}
-                // expiry is optional
+                placeholder="Check package for 'Best By' date"
               />
+              {expiryMessage ? (
+                <div className="rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-2">
+                  <p className="text-xs text-amber-900 dark:text-amber-100">
+                    ℹ️ {expiryMessage}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  💡 Tip: Look for "Best By", "Use By", or "Expiration" date on the package
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
@@ -280,6 +337,26 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* Confirmation dialog for items without expiry date */}
+    <AlertDialog open={showExpiryWarning} onOpenChange={setShowExpiryWarning}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>No expiration date?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Items without expiration dates will appear in "Expiring Soon" to help you keep track of them.
+            <br /><br />
+            Are you sure you want to continue without adding an expiration date?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Go Back</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmNoExpiry}>
+            Continue Without Date
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

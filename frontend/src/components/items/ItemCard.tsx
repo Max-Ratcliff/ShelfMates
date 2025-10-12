@@ -23,7 +23,7 @@ interface ItemCardProps {
 
 export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   const getExpiryStatus = (date?: string) => {
-    if (!date) return { label: "No expiry", color: "gray" };
+    if (!date) return { label: "No expiry date", color: "orange" };
     const expiry = new Date(date);
     const today = new Date();
     const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -90,7 +90,8 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
                   "text-xs font-medium",
                   status.color === "red" && "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
                   status.color === "yellow" && "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
-                  status.color === "green" && "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30"
+                  status.color === "green" && "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30",
+                  status.color === "orange" && "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30"
                 )}
               >
           {status.label}

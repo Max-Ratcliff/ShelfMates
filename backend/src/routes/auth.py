@@ -1,7 +1,7 @@
 """Authentication routes"""
 from fastapi import APIRouter, Depends, HTTPException, status
-from ..models.user import UserCreate, UserLogin, UserResponse, Token
-from ..services import auth_service
+from src.models.user import UserCreate, UserLogin, UserResponse, Token
+from src.services import auth_service
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
