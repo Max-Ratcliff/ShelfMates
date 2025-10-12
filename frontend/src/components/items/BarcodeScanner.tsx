@@ -16,7 +16,6 @@ interface BarcodeScannerProps {
   onProductFound: (productData: {
     name: string;
     emoji: string;
-    expiryDate: string;
     productInfo: ProductInfo;
   }) => void;
   onClose: () => void;
@@ -74,7 +73,6 @@ export function BarcodeScanner({ onProductFound, onClose }: BarcodeScannerProps)
       const productData = {
         name: formatProductName(product),
         emoji: suggestEmojiFromProduct(product),
-        expiryDate: estimateExpiryDate(product),
         productInfo: product,
       };
 

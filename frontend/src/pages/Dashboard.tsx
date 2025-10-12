@@ -3,7 +3,9 @@ import { Plus } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ItemCard, Item as ItemCardType } from "@/components/items/ItemCard";
+import { GroceryItemCard } from "@/components/items/GroceryItemCard";
 import { AddItemModal } from "@/components/items/AddItemModal";
+import { AddGroceryItemModal } from "@/components/items/AddGroceryItemModal";
 import { toast } from "sonner";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +17,7 @@ export default function Dashboard() {
   const { currentUser } = useAuth();
   const { householdId } = useHousehold();
   const { items, loading } = useItems(householdId);
-  const { personalItems, communalItems, expiringItems } = useFilteredItems(
+  const { personalItems, communalItems, expiringItems, groceryItems } = useFilteredItems(
     items,
     currentUser?.uid || ''
   );
@@ -50,6 +52,12 @@ export default function Dashboard() {
       pageDescription = "Items that need attention";
       emptyMessage = "No items expiring soon. Great job keeping things fresh!";
       break;
+    case 'groceries':
+      displayItems = groceryItems;
+      pageTitle = "Grocery List";
+      pageDescription = "Items that need to be bought for your household";
+      emptyMessage = "No grocery items yet. Shelf is fully stocked!";
+      break; 
     default:
       displayItems = personalItems;
       pageTitle = "My Shelf";
@@ -123,12 +131,21 @@ export default function Dashboard() {
         {displayItems.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {displayItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item as ItemCardType}
-                onEdit={handleEditItem}
-                onDelete={handleDeleteItem}
-              />
+              currentView === 'groceries' ? (
+                <GroceryItemCard
+                  key={item.id}
+                  item={item as ItemCardType}
+                  onEdit={handleEditItem}
+                  onDelete={handleDeleteItem}
+                />
+              ) : (
+                <ItemCard
+                  key={item.id}
+                  item={item as ItemCardType}
+                  onEdit={handleEditItem}
+                  onDelete={handleDeleteItem}
+                />
+              )
             ))}
           </div>
         ) : (
@@ -149,15 +166,27 @@ export default function Dashboard() {
         <Plus className="h-6 w-6" />
       </Button>
 
-      <AddItemModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingItem(null);
-        }}
-        onSave={handleSaveItem}
-        editItem={editingItem}
-      />
+      {currentView === 'groceries' ? (
+        <AddGroceryItemModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingItem(null);
+          }}
+          onSave={handleSaveItem}
+          editItem={editingItem}
+        />
+      ) : (
+        <AddItemModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingItem(null);
+          }}
+          onSave={handleSaveItem}
+          editItem={editingItem}
+        />
+      )}
     </div>
   );
 }

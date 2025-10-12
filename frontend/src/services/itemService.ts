@@ -19,6 +19,7 @@ export interface ItemData {
   quantity: number;
   expiryDate?: string;
   isCommunal: boolean;
+  isGrocery?: boolean;
   ownerName?: string;
   ownerId: string;
   householdId: string;

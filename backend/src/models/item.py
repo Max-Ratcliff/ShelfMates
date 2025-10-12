@@ -10,6 +10,7 @@ class ItemBase(BaseModel):
     quantity: int
     expiry_date: Optional[date] = None
     is_communal: bool
+    is_grocery: bool = False
 
 
 class ItemCreate(ItemBase):

@@ -20,7 +20,7 @@ import { addItem, updateItem, Item as FirestoreItem } from "@/services/itemServi
 import { BarcodeScanner } from "./BarcodeScanner";
 import { ProductInfo } from "@/services/barcodeService";
 
-interface AddItemModalProps {
+interface AddGroceryItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave?: (item: Omit<Item, "id">) => void;
@@ -38,12 +38,11 @@ const commonEmojis = [
   "🥛", "🍼", "☕", "🫖", "🧃", "🥤", "🧋", "🍷", "🍺", "🧊"
 ];
 
-export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModalProps) {
+export function AddGroceryItemModal({ isOpen, onClose, onSave, editItem }: AddGroceryItemModalProps) {
   const { currentUser } = useAuth();
   const { householdId, userData } = useHousehold();
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [expiryDate, setExpiryDate] = useState("");
   const [isCommunal, setIsCommunal] = useState(true);
   const [emoji, setEmoji] = useState("");
   const [saving, setSaving] = useState(false);
@@ -54,13 +53,11 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
     if (editItem) {
       setName(editItem.name);
       setQuantity(editItem.quantity);
-      setExpiryDate(editItem.expiryDate);
       setIsCommunal(editItem.isCommunal);
       setEmoji(editItem.emoji || "");
     } else {
       setName("");
       setQuantity(1);
-      setExpiryDate("");
       setIsCommunal(true);
       setEmoji("");
     }
@@ -69,12 +66,10 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
   const handleProductFound = (productData: {
     name: string;
     emoji: string;
-    expiryDate: string;
     productInfo: ProductInfo;
   }) => {
     setName(productData.name);
     setEmoji(productData.emoji);
-    setExpiryDate(productData.expiryDate);
     setScannedProduct(productData.productInfo);
     setShowScanner(false);
     toast.success(`Found: ${productData.name}`, {
@@ -103,10 +98,8 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       const itemData: any = {
         name: name.trim(),
         quantity,
-        // only include expiryDate if user provided one
-        ...(expiryDate ? { expiryDate } : {}),
         isCommunal,
-        isGrocery: false,
+        isGrocery: true,
         ownerId: currentUser.uid,
         householdId,
       };
@@ -242,24 +235,13 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="expiry">Expiry Date</Label>
-              <Input
-                id="expiry"
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                // expiry is optional
-              />
-            </div>
-
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="space-y-0.5">
                 <Label htmlFor="communal" className="cursor-pointer">
-                  Communal Item
+                  Communal Grocery
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Available to all household members
+                  Share with everyone
                 </p>
               </div>
               <Switch

@@ -23,6 +23,7 @@ export const useItems = (householdId: string | null | undefined) => {
     const unsubscribe = subscribeToItems(
       householdId,
       (updatedItems) => {
+        console.log("Received updated items:", updatedItems);
         setItems(updatedItems);
         setLoading(false);
       },
@@ -46,10 +47,10 @@ export const useItems = (householdId: string | null | undefined) => {
  */
 export const useFilteredItems = (items: Item[], userId: string) => {
   const personalItems = items.filter(
-    (item) => !item.isCommunal && item.ownerId === userId
+    (item) => !item.isCommunal && item.ownerId === userId && !item.isGrocery
   );
 
-  const communalItems = items.filter((item) => item.isCommunal);
+  const communalItems = items.filter((item) => item.isCommunal && !item.isGrocery);
 
   const expiringItems = items.filter((item) => {
     if (!item.expiryDate) return false;
@@ -68,10 +69,13 @@ export const useFilteredItems = (items: Item[], userId: string) => {
     return expiry < today;
   });
 
+  const groceryItems = items.filter((item) => item.isGrocery);
+
   return {
     personalItems,
     communalItems,
     expiringItems,
     expiredItems,
+    groceryItems,
   };
 };

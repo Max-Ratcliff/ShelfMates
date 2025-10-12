@@ -26,7 +26,9 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
     if (!date) return { label: "No expiry", color: "gray" };
     const expiry = new Date(date);
     const today = new Date();
-    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    today.setHours(0, 0, 0, 0);
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) return { label: "Expired", color: "red" };
     if (diffDays <= 2) return { label: "Urgent", color: "red" };
@@ -36,6 +38,8 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   };
 
   const status = getExpiryStatus(item.expiryDate);
+
+  const displayDate = item.expiryDate ? new Date(item.expiryDate).toLocaleDateString(undefined, { timeZone: 'UTC' }) : "No expiry";
 
   return (
     <Card className="group transition-all hover:shadow-md">
@@ -79,7 +83,7 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
               <span>•</span>
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : "No expiry"}
+                {displayDate}
               </div>
             </div>
 
