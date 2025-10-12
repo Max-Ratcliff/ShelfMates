@@ -1,73 +1,116 @@
-# Welcome to your Lovable project
+# ShelfMates - Shared Food Inventory Tracker
 
-## Project info
+Track and share food inventory with your household. Never let food go to waste again.
 
-**URL**: https://lovable.dev/projects/e1f3dcbe-19ae-4f0b-8e2f-6b122606cc39
+## Features
 
-## How can I edit this code?
+- 📱 Barcode scanning with UPC database integration
+- 📅 Smart expiry date estimation using USDA FoodKeeper data
+- 🔥 Firebase authentication with Google Sign-In
+- 👥 Shared household inventory management
+- 📊 Dashboard with expiring items alerts
+- 🎯 Real-time synchronization across devices
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React + TypeScript + Vite
+- **UI**: shadcn/ui + Tailwind CSS
+- **Backend**: FastAPI (Python)
+- **Database**: Firebase Firestore
+- **Authentication**: Firebase Auth
+- **Hosting**: Vercel (frontend) + Google Cloud Run (backend)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e1f3dcbe-19ae-4f0b-8e2f-6b122606cc39) and start prompting.
+## Development Setup
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js 18+ and npm
+- Python 3.11+
+- Docker (for backend deployment)
+- Firebase project
+- Google Cloud account (for backend deployment)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Frontend Setup
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Navigate to frontend directory
+cd frontend
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Install dependencies
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your Firebase credentials
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The frontend will be available at `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Backend Setup
 
-**Use GitHub Codespaces**
+```sh
+# Navigate to backend directory
+cd backend
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-## What technologies are used for this project?
+# Install dependencies
+pip install -r requirements.txt
 
-This project is built with:
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+# Run development server
+uvicorn src.main:app --reload --port 8000
+```
 
-## How can I deploy this project?
+The backend API will be available at `http://localhost:8000`
 
-Simply open [Lovable](https://lovable.dev/projects/e1f3dcbe-19ae-4f0b-8e2f-6b122606cc39) and click on Share -> Publish.
+## Deployment
 
-## Can I connect a custom domain to my Lovable project?
+See [DEPLOYMENT.md](../DEPLOYMENT.md) for detailed deployment instructions.
 
-Yes, you can!
+### Quick Deploy
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+**Frontend (Vercel):**
+- Push to GitHub
+- Connect repository to Vercel
+- Add environment variables
+- Deploy
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Backend (Cloud Run):**
+```sh
+cd backend
+./deploy.sh
+```
+
+## Environment Variables
+
+### Frontend (.env)
+```
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
+VITE_API_URL=http://localhost:8000
+```
+
+### Backend (.env)
+```
+ENVIRONMENT=development
+FIREBASE_PROJECT_ID=your-project-id
+SECRET_KEY=your-secret-key
+ALLOWED_ORIGINS=http://localhost:8080,http://localhost:5173
+```
+
+## License
+
+MIT
