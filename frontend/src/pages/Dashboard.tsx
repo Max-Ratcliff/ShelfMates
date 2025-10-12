@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Scan } from "lucide-react";
+import { Plus, Scan, ArrowUpDown } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ItemCard, Item as ItemCardType } from "@/components/items/ItemCard";
@@ -13,6 +13,14 @@ import { useHousehold } from "@/contexts/HouseholdContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useItems, useFilteredItems } from "@/hooks/useItems";
 import { deleteItem as deleteItemService, Item } from "@/services/itemService";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const location = useLocation();
@@ -27,31 +35,63 @@ export default function Dashboard() {
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [scannedData, setScannedData] = useState<any>(null);
+  const [filter, setFilter] = useState<"all" | "personal" | "communal">("all");
+  const [sortBy, setSortBy] = useState<"expiring" | "recent" | "alphabetical">("expiring");
 
   // Determine which view to show based on route
   const currentView = location.pathname.split('/')[1] || 'dashboard';
+
+  // Sort items function
+  const sortItems = (items: Item[]) => {
+    const sorted = [...items];
+    switch (sortBy) {
+      case "expiring":
+        return sorted.sort((a, b) => {
+          if (!a.expiryDate && !b.expiryDate) return 0;
+          if (!a.expiryDate) return 1;
+          if (!b.expiryDate) return -1;
+          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+        });
+      case "recent":
+        return sorted.sort((a, b) => {
+          const aTime = (a as any).created_at?.seconds || 0;
+          const bTime = (b as any).created_at?.seconds || 0;
+          return bTime - aTime;
+        });
+      case "alphabetical":
+        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      default:
+        return sorted;
+    }
+  };
 
   // Determine which items to display and page title
   let displayItems: Item[] = [];
   let pageTitle = "";
   let pageDescription = "";
   let emptyMessage = "";
+  let showSections = false; // For hybrid approach
 
   switch (currentView) {
     case 'dashboard':
-      displayItems = personalItems;
       pageTitle = "My Shelf";
-      pageDescription = "Your personal food inventory";
-      emptyMessage = "No personal items yet. Add your first item!";
-      break;
-    case 'shared':
-      displayItems = communalItems;
-      pageTitle = "Shared Shelf";
-      pageDescription = "Items shared with your household";
-      emptyMessage = "No shared items yet. Add communal items for your household!";
+      pageDescription = "Your household food inventory";
+
+      // Hybrid approach: show sections when filter=all, unified list otherwise
+      if (filter === "all") {
+        showSections = true;
+        displayItems = []; // Not used in sections view
+        emptyMessage = "No items yet. Add your first item!";
+      } else if (filter === "personal") {
+        displayItems = sortItems(personalItems);
+        emptyMessage = "No personal items yet. Add your first item!";
+      } else if (filter === "communal") {
+        displayItems = sortItems(communalItems);
+        emptyMessage = "No communal items yet. Add shared items for your household!";
+      }
       break;
     case 'expiring':
-      displayItems = expiringItems;
+      displayItems = sortItems(expiringItems);
       pageTitle = "Expiring Soon";
       pageDescription = "Items that need attention";
       emptyMessage = "No items expiring soon. Great job keeping things fresh!";
@@ -61,12 +101,13 @@ export default function Dashboard() {
       pageTitle = "Grocery List";
       pageDescription = "Items that need to be bought for your household";
       emptyMessage = "No grocery items yet. Shelf is fully stocked!";
-      break; 
+      break;
     default:
-      displayItems = personalItems;
       pageTitle = "My Shelf";
-      pageDescription = "Your personal food inventory";
-      emptyMessage = "No personal items yet. Add your first item!";
+      pageDescription = "Your household food inventory";
+      showSections = true;
+      displayItems = [];
+      emptyMessage = "No items yet. Add your first item!";
   }
 
   const handleSaveItem = () => {
@@ -141,37 +182,128 @@ export default function Dashboard() {
         <p className="mt-1 sm:mt-2 text-sm sm:text-base text-muted-foreground">
           {pageDescription}
         </p>
-      </div>
 
-      <div className="space-y-4">
-        {displayItems.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {displayItems.map((item) => (
-              currentView === 'groceries' ? (
-                <GroceryItemCard
-                  key={item.id}
-                  item={item as ItemCardType}
-                  onEdit={handleEditItem}
-                  onDelete={handleDeleteItem}
-                />
-              ) : (
-                <ItemCard
-                  key={item.id}
-                  item={item as ItemCardType}
-                  onEdit={handleEditItem}
-                  onDelete={handleDeleteItem}
-                />
-              )
-            ))}
+        {/* Filter tabs and sort dropdown - only show on dashboard */}
+        {currentView === 'dashboard' && (
+          <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {/* Filter tabs */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant={filter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter("all")}
+                className="touch-manipulation"
+              >
+                All
+              </Button>
+              <Button
+                variant={filter === "personal" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter("personal")}
+                className="touch-manipulation"
+              >
+                Personal
+              </Button>
+              <Button
+                variant={filter === "communal" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter("communal")}
+                className="touch-manipulation"
+              >
+                Communal
+              </Button>
+            </div>
+
+            {/* Sort dropdown */}
+            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <SelectTrigger className="w-[180px]">
+                <ArrowUpDown className="mr-2 h-4 w-4" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expiring">Expiring Soon</SelectItem>
+                <SelectItem value="recent">Recently Added</SelectItem>
+                <SelectItem value="alphabetical">A-Z</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        ) : (
-          <EmptyState message={emptyMessage} />
         )}
       </div>
 
+      {/* Sections view (when filter=all on dashboard) */}
+      {currentView === 'dashboard' && showSections ? (
+        <div className="space-y-8 pb-40">
+          {/* Personal Items Section */}
+          {personalItems.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-xl sm:text-2xl font-semibold text-foreground">Personal Items</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {sortItems(personalItems).map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item as ItemCardType}
+                    onEdit={handleEditItem}
+                    onDelete={handleDeleteItem}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Communal Items Section */}
+          {communalItems.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-xl sm:text-2xl font-semibold text-foreground">Communal Items</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {sortItems(communalItems).map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item as ItemCardType}
+                    onEdit={handleEditItem}
+                    onDelete={handleDeleteItem}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty state if no items */}
+          {personalItems.length === 0 && communalItems.length === 0 && (
+            <EmptyState message={emptyMessage} />
+          )}
+        </div>
+      ) : (
+        /* Unified list view (when filter=specific, or other views) */
+        <div className="space-y-4 pb-40">
+          {displayItems.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {displayItems.map((item) => (
+                currentView === 'groceries' ? (
+                  <GroceryItemCard
+                    key={item.id}
+                    item={item as ItemCardType}
+                    onEdit={handleEditItem}
+                    onDelete={handleDeleteItem}
+                  />
+                ) : (
+                  <ItemCard
+                    key={item.id}
+                    item={item as ItemCardType}
+                    onEdit={handleEditItem}
+                    onDelete={handleDeleteItem}
+                  />
+                )
+              ))}
+            </div>
+          ) : (
+            <EmptyState message={emptyMessage} />
+          )}
+        </div>
+      )}
+
               {/* Expired Items Section - Hide on grocery list */}
         {currentView !== 'groceries' && expiredItems && expiredItems.length > 0 && (
-          <div className="mt-10 space-y-4">
+          <div className="mt-10 space-y-4 pb-40">
             <h2 className="text-xl sm:text-2xl font-semibold text-foreground">Items to Toss</h2>
             <p className="text-sm text-muted-foreground mb-4">
               These items have already expired.

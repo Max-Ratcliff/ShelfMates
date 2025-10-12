@@ -46,7 +46,10 @@ export function GroceryItemCard({ item, onEdit, onDelete }: GroceryItemCardProps
       return;
     }
     try {
-      await updateItem(item.id, { expiryDate });
+      await updateItem(item.id, {
+        expiryDate,
+        isGrocery: false
+      });
       toast.success("Item moved to shelf!");
     } catch (error) {
       toast.error("Failed to move item to shelf");
@@ -64,23 +67,27 @@ export function GroceryItemCard({ item, onEdit, onDelete }: GroceryItemCardProps
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Move Item to Shelf</AlertDialogTitle>
+                  <AlertDialogTitle>Did you buy this item?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    To move this item to your shelf, please enter an expiry date.
+                    Great! Now add it to your shelf with an expiry date so we can help you track it.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="space-y-2">
-                  <label htmlFor="expiry-date">Expiry Date</label>
+                  <label htmlFor="expiry-date" className="text-sm font-medium">Expiry Date</label>
                   <Input
                     id="expiry-date"
                     type="date"
                     value={expiryDate}
                     onChange={(e) => setExpiryDate(e.target.value)}
+                    placeholder="Check package for expiry date"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    💡 Look for "Best By", "Use By", or "Expiration" date on the package
+                  </p>
                 </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleContinue}>Continue</AlertDialogAction>
+                  <AlertDialogCancel>Not Yet</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleContinue}>Add to Shelf</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

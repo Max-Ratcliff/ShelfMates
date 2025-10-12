@@ -79,6 +79,13 @@ export default function Login() {
     }
   };
 
+  const handleJoinHouseholdClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Store flag to indicate user wants to join a household
+    sessionStorage.setItem('pendingHouseholdJoin', 'true');
+    navigate('/signup');
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-card">
@@ -175,9 +182,13 @@ export default function Login() {
           </p>
           <p className="text-center text-sm text-muted-foreground">
             Have an invite code?{" "}
-            <Link to="/join" className="font-medium text-secondary hover:underline">
+            <a
+              href="/signup"
+              onClick={handleJoinHouseholdClick}
+              className="font-medium text-secondary hover:underline cursor-pointer"
+            >
               Join household
-            </Link>
+            </a>
           </p>
         </CardFooter>
       </Card>

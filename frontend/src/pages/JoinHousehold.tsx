@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHousehold } from "@/contexts/HouseholdContext";
@@ -14,9 +16,25 @@ export default function JoinHousehold() {
   const [inviteCode, setInviteCode] = useState("");
   const [householdName, setHouseholdName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const inviteCodeInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { refreshUserData } = useHousehold();
+
+  // Check if user just created account to join household
+  useEffect(() => {
+    const pendingJoin = sessionStorage.getItem('pendingHouseholdJoin');
+    if (pendingJoin === 'true') {
+      setShowWelcome(true);
+      // Clear the flag
+      sessionStorage.removeItem('pendingHouseholdJoin');
+      // Focus on the invite code input
+      setTimeout(() => {
+        inviteCodeInputRef.current?.focus();
+      }, 100);
+    }
+  }, []);
 
   const handleJoinHousehold = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,9 +121,19 @@ export default function JoinHousehold() {
             <TabsContent value="join" className="space-y-4 mt-4">
               <form onSubmit={handleJoinHousehold}>
                 <div className="space-y-4">
+                  {showWelcome && (
+                    <Alert className="bg-primary/10 border-primary">
+                      <PartyPopper className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Welcome!</strong> Your account is ready. Now enter your invite code to join your household.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="code">Invite Code</Label>
                     <Input
+                      ref={inviteCodeInputRef}
                       id="code"
                       type="text"
                       placeholder="ABC123"

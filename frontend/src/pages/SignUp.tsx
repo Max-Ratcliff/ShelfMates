@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +15,17 @@ export default function SignUp() {
   const [householdName, setHouseholdName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isJoiningHousehold, setIsJoiningHousehold] = useState(false);
   const navigate = useNavigate();
   const { signUp, signInWithGoogle } = useAuth();
+
+  // Check if user is coming from "Join household" flow
+  useEffect(() => {
+    const pendingJoin = sessionStorage.getItem('pendingHouseholdJoin');
+    if (pendingJoin === 'true') {
+      setIsJoiningHousehold(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,10 +80,16 @@ export default function SignUp() {
       <Card className="w-full max-w-md shadow-card">
         <CardHeader className="space-y-2 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
-            <span className="text-3xl">🥘</span>
+            <span className="text-3xl">{isJoiningHousehold ? "🏠" : "🥘"}</span>
           </div>
-          <CardTitle className="text-2xl">Create your account</CardTitle>
-          <CardDescription>Start tracking your household's food inventory</CardDescription>
+          <CardTitle className="text-2xl">
+            {isJoiningHousehold ? "Join a Household" : "Create your account"}
+          </CardTitle>
+          <CardDescription>
+            {isJoiningHousehold
+              ? "First, create your account. Then you'll enter your invite code."
+              : "Start tracking your household's food inventory"}
+          </CardDescription>
         </CardHeader>
         
         <form onSubmit={handleSubmit}>
@@ -83,6 +98,15 @@ export default function SignUp() {
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {isJoiningHousehold && (
+              <Alert className="bg-secondary/50 border-secondary">
+                <Home className="h-4 w-4" />
+                <AlertDescription>
+                  After creating your account, you'll be able to enter your invite code to join the household.
+                </AlertDescription>
               </Alert>
             )}
 
@@ -109,7 +133,7 @@ export default function SignUp() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -122,20 +146,22 @@ export default function SignUp() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="household">Household Name</Label>
-              <Input
-                id="household"
-                type="text"
-                placeholder="The Smith House"
-                value={householdName}
-                onChange={(e) => setHouseholdName(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                This will be visible to all household members
-              </p>
-            </div>
+            {!isJoiningHousehold && (
+              <div className="space-y-2">
+                <Label htmlFor="household">Household Name</Label>
+                <Input
+                  id="household"
+                  type="text"
+                  placeholder="The Smith House"
+                  value={householdName}
+                  onChange={(e) => setHouseholdName(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  This will be visible to all household members
+                </p>
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating account..." : "Create Account"}

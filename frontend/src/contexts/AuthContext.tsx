@@ -11,6 +11,8 @@ import {
   linkWithCredential,
   EmailAuthProvider,
   GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -193,6 +195,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       throw error;
     }
   };
+
+  // Set persistence to local storage
+  useEffect(() => {
+    setPersistence(auth, browserLocalPersistence)
+      .catch((error) => {
+        console.error('Error setting persistence:', error);
+      });
+  }, []);
 
   // Listen for auth state changes
   useEffect(() => {

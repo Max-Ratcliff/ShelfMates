@@ -116,10 +116,10 @@ export function AddGroceryItemModal({ isOpen, onClose, onSave, editItem }: AddGr
 
       if (editItem) {
         await updateItem(editItem.id, itemData);
-        toast.success("Item updated successfully");
+        toast.success("Grocery item updated");
       } else {
         await addItem(itemData);
-        toast.success("Item added successfully");
+        toast.success("Added to grocery list");
       }
 
       // Call onSave if provided (for backwards compatibility)
@@ -149,11 +149,11 @@ export function AddGroceryItemModal({ isOpen, onClose, onSave, editItem }: AddGr
             <DialogHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <DialogTitle>{editItem ? "Edit Item" : "Add New Item"}</DialogTitle>
+                  <DialogTitle>{editItem ? "Edit Grocery Item" : "Add to Grocery List"}</DialogTitle>
                   <DialogDescription>
                     {editItem
-                      ? "Update the details of your food item"
-                      : "Add a new item to your shelf"}
+                      ? "Update the details of your grocery item"
+                      : "Add items you need to buy for your household"}
                   </DialogDescription>
                 </div>
                 {!editItem && (
@@ -257,7 +257,7 @@ export function AddGroceryItemModal({ isOpen, onClose, onSave, editItem }: AddGr
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : editItem ? "Update Item" : "Add Item"}
+              {saving ? "Saving..." : editItem ? "Update Item" : "Add to List"}
             </Button>
           </DialogFooter>
         </form>

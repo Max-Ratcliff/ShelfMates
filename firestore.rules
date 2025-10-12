@@ -18,6 +18,11 @@ service cloud.firestore {
       // Users can read their own document
       allow read: if isAuthenticated() && request.auth.uid == userId;
 
+      // Users can read other users in the same household
+      allow read: if isAuthenticated() &&
+                     resource.data.household_id != null &&
+                     resource.data.household_id == userHouseholdId();
+
       // Users can create their own document during signup
       allow create: if isAuthenticated() && request.auth.uid == userId;
 
@@ -30,9 +35,9 @@ service cloud.firestore {
 
     // Households collection
     match /households/{householdId} {
-      // Users can read if they belong to this household
-      allow read: if isAuthenticated() &&
-                     userHouseholdId() == householdId;
+      // Allow authenticated users to read households
+      // This is needed for invite code lookups when joining
+      allow read: if isAuthenticated();
 
       // Only authenticated users can create households
       allow create: if isAuthenticated();

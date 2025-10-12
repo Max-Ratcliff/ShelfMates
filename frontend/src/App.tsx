@@ -49,9 +49,8 @@ const App = () => (
                 }
               >
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="shared" element={<Dashboard />} />
                 <Route path="expiring" element={<Dashboard />} />
-                <Route path="groceries" element={<Dashboard />} />"
+                <Route path="groceries" element={<Dashboard />} />
                 <Route path="settings" element={<HouseholdSettings />} />
               </Route>
 
