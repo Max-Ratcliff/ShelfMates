@@ -80,6 +80,8 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem, initialData }:
   const [showExpiryWarning, setShowExpiryWarning] = useState(false);
   const [expiryMessage, setExpiryMessage] = useState<string>('');
   const [isLoadingExpiry, setIsLoadingExpiry] = useState(false);
+  const [showExpenseSection, setShowExpenseSection] = useState(false);
+  const [itemType, setItemType] = useState<'personal' | 'communal'>('communal');
 
   useEffect(() => {
     if (editItem) {
@@ -123,25 +125,41 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem, initialData }:
     setExpiryMessage('');
   };
 
-  // Fetch household members for participant picker. Initialize participants only when empty
+  // Fetch household members for participant picker
   useEffect(() => {
     const fetchMembers = async () => {
-      if (!householdId) return;
+      if (!householdId || !currentUser) return;
       try {
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("household_id", "==", householdId));
         const querySnapshot = await getDocs(q);
         const members = querySnapshot.docs.map((d) => ({ id: d.id, name: (d.data() as any).name || 'User' }));
         setHouseholdMembers(members);
-        // Only initialize participants if the user hasn't made a selection yet
-        setParticipants((prev) => (prev.length === 0 ? members.map((m) => m.id) : prev));
+
+        // Initialize participants based on itemType
+        if (itemType === 'communal') {
+          setParticipants(members.map((m) => m.id));
+        } else {
+          setParticipants([currentUser.uid]);
+        }
       } catch (error) {
         console.error('Error loading household members', error);
       }
     };
 
     fetchMembers();
-  }, [householdId]);
+  }, [householdId, currentUser]);
+
+  // Handle itemType changes
+  useEffect(() => {
+    if (!currentUser || householdMembers.length === 0) return;
+
+    if (itemType === 'personal') {
+      setParticipants([currentUser.uid]);
+    } else {
+      setParticipants(householdMembers.map((m) => m.id));
+    }
+  }, [itemType, currentUser, householdMembers]);
 
   const handleProductFound = (productData: {
     name: string;
@@ -366,8 +384,8 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem, initialData }:
       )}
 
       <Dialog open={isOpen && !showScanner} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <form onSubmit={handleSubmit} className="pt-safe">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden">
+          <form onSubmit={handleSubmit} className="pt-safe min-w-0">
             <DialogHeader>
               <DialogTitle>{editItem ? "Edit Item" : "Add New Item"}</DialogTitle>
               <DialogDescription>
@@ -377,7 +395,7 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem, initialData }:
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 min-w-0">
               {!editItem && !scannedProduct && (
                 <Button
                   type="button"
@@ -401,34 +419,37 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem, initialData }:
                 </div>
               )}
 
+              {/* Horizontal scrollable emoji picker */}
               <div className="space-y-2">
                 <Label htmlFor="emoji">Emoji (Optional)</Label>
-              <div className="flex flex-wrap gap-2 p-3 border border-border rounded-md bg-muted/30 max-h-32 overflow-y-auto">
-                <button
-                  type="button"
-                  onClick={() => setEmoji("")}
-                  className={`w-10 h-10 flex items-center justify-center rounded-md border-2 transition-all hover:scale-110 ${
-                    emoji === "" ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
-                  }`}
-                  aria-label="No emoji"
-                >
-                  <span className="text-muted-foreground text-xs">None</span>
-                </button>
-                {Object.entries(commonEmojis).map(([e, name]) => (
-                  <button
-                  key={e}
-                  type="button"
-                  onClick={() => setEmoji(e)}
-                  className={`w-10 h-10 flex items-center justify-center text-2xl rounded-md border-2 transition-all hover:scale-110 ${
-                    emoji === e ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
-                  }`}
-                  aria-label={`Select ${e} emoji`}
-                >
-                  {e}
-                </button>
-                ))}
+                <div className="w-full max-w-full overflow-x-auto border border-border rounded-md bg-muted/30">
+                  <div className="flex gap-2 p-2" style={{ width: 'max-content' }}>
+                    <button
+                      type="button"
+                      onClick={() => setEmoji("")}
+                      className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-md border-2 transition-all hover:scale-110 ${
+                        emoji === "" ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
+                      }`}
+                      aria-label="No emoji"
+                    >
+                      <span className="text-muted-foreground text-xs">None</span>
+                    </button>
+                    {Object.entries(commonEmojis).map(([e, name]) => (
+                      <button
+                        key={e}
+                        type="button"
+                        onClick={() => setEmoji(e)}
+                        className={`w-10 h-10 flex-shrink-0 flex items-center justify-center text-2xl rounded-md border-2 transition-all hover:scale-110 ${
+                          emoji === e ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
+                        }`}
+                        aria-label={`Select ${e} emoji`}
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="name">Item Name</Label>
@@ -490,66 +511,128 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem, initialData }:
               )}
             </div>
 
-            {/* Communal toggle removed — communal is derived from participants selection */}
-
-            {/* Price input */}
+            {/* Personal/Communal Toggle */}
             <div className="space-y-2">
-              <Label htmlFor="price">Price (optional)</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                placeholder="e.g., 4.99"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">Enter a price to automatically create an expense split when saving.</p>
+              <Label>Item Type</Label>
+              <div className="flex items-center gap-4 p-3 border border-border rounded-md bg-muted/30">
+                <button
+                  type="button"
+                  onClick={() => setItemType('personal')}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                    itemType === 'personal'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-transparent text-foreground hover:bg-muted'
+                  }`}
+                >
+                  Personal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setItemType('communal')}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                    itemType === 'communal'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-transparent text-foreground hover:bg-muted'
+                  }`}
+                >
+                  Communal
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {itemType === 'personal' ? 'Only you will be charged' : 'Cost will be split with household members'}
+              </p>
             </div>
 
-            {/* Participant picker */}
+            {/* Collapsible Expense Section */}
             <div className="space-y-2">
-              <Label>Split With</Label>
-              <p className="text-sm text-muted-foreground">Choose which household members share the cost of this item.</p>
+              <button
+                type="button"
+                onClick={() => setShowExpenseSection(!showExpenseSection)}
+                className="w-full flex items-center justify-between p-3 border border-border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors text-foreground"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">💰</span>
+                  <span className="font-medium text-foreground">Expense & Split</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {price && parseFloat(price) > 0 ? (
+                    <span className="text-sm text-muted-foreground">
+                      ${parseFloat(price).toFixed(2)} · {itemType === 'personal' ? 'Just you' : `${participants.length} people`}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">No expense</span>
+                  )}
+                  <span className={`text-foreground transition-transform ${showExpenseSection ? 'rotate-180' : ''}`}>▼</span>
+                </div>
+              </button>
 
-              <div className="mt-2 flex flex-col gap-2 max-h-40 overflow-y-auto p-2 rounded-md border border-border">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={participants.length > 0 && participants.length === householdMembers.length}
-                    onChange={(e) => {
-                      const checked = (e.target as HTMLInputElement).checked;
-                      if (!checked) {
-                        // explicitly clear all participants
-                        setParticipants([]);
-                      } else {
-                        setParticipants(householdMembers.map(m => m.id));
-                      }
-                    }}
-                  />
-                  <span className="select-none">All household members</span>
-                </label>
+              {showExpenseSection && (
+                <div className="space-y-4 p-4 border border-border rounded-md bg-muted/10">
+                  {/* Price input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g., 4.99"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Enter the amount you paid for this item</p>
+                  </div>
 
-                {householdMembers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No household members found</p>
-                ) : (
-                  householdMembers.map((m) => (
-                    <label key={m.id} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={participants.includes(m.id)}
-                        onChange={() => {
-                          if (participants.includes(m.id)) {
-                            setParticipants(participants.filter((id) => id !== m.id));
-                          } else {
-                            setParticipants([...participants, m.id]);
-                          }
-                        }}
-                      />
-                      <span className="select-none">{m.name}{m.id === currentUser?.uid ? ' (You)' : ''}</span>
-                    </label>
-                  ))
-                )}
-              </div>
+                  {/* Participant picker - only show if communal */}
+                  {itemType === 'communal' && (
+                    <div className="space-y-2">
+                      <Label>Split With</Label>
+                      <p className="text-xs text-muted-foreground">Customize who shares the cost</p>
+
+                      <div className="flex flex-col gap-2 max-h-40 overflow-y-auto p-3 rounded-md border border-border bg-background">
+                        <label className="flex items-center gap-2 font-medium">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4"
+                            checked={participants.length > 0 && participants.length === householdMembers.length}
+                            onChange={(e) => {
+                              const checked = (e.target as HTMLInputElement).checked;
+                              if (!checked && currentUser) {
+                                setParticipants([currentUser.uid]);
+                              } else {
+                                setParticipants(householdMembers.map(m => m.id));
+                              }
+                            }}
+                          />
+                          <span className="select-none">Everyone ({householdMembers.length} people)</span>
+                        </label>
+
+                        {householdMembers.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No household members found</p>
+                        ) : (
+                          householdMembers.map((m) => (
+                            <label key={m.id} className="flex items-center gap-2 pl-6">
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4"
+                                checked={participants.includes(m.id)}
+                                onChange={() => {
+                                  if (participants.includes(m.id)) {
+                                    const newParticipants = participants.filter((id) => id !== m.id);
+                                    setParticipants(newParticipants.length > 0 ? newParticipants : [currentUser!.uid]);
+                                  } else {
+                                    setParticipants([...participants, m.id]);
+                                  }
+                                }}
+                              />
+                              <span className="select-none text-sm">{m.name}{m.id === currentUser?.uid ? ' (You)' : ''}</span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
