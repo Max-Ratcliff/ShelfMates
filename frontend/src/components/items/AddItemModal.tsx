@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Scan } from "lucide-react";
+import { Scan, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +61,7 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
   const [scannedProduct, setScannedProduct] = useState<ProductInfo | null>(null);
   const [showExpiryWarning, setShowExpiryWarning] = useState(false);
   const [expiryMessage, setExpiryMessage] = useState<string>('');
+  const [isLoadingExpiry, setIsLoadingExpiry] = useState(false);
 
   useEffect(() => {
     if (editItem) {
@@ -80,6 +81,19 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
     }
   }, [editItem, isOpen]);
 
+  const handleProductScanning = (productData: {
+    name: string;
+    emoji: string;
+    productInfo: ProductInfo;
+  }) => {
+    setName(productData.name);
+    setEmoji(productData.emoji);
+    setScannedProduct(productData.productInfo);
+    setIsLoadingExpiry(true);
+    setExpiryDate('');
+    setExpiryMessage('');
+  };
+
   const handleProductFound = (productData: {
     name: string;
     emoji: string;
@@ -93,7 +107,7 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
     setExpiryDate(productData.expiryDate);
     setExpiryMessage(productData.expiryMessage || '');
     setScannedProduct(productData.productInfo);
-    setShowScanner(false);
+    setIsLoadingExpiry(false);
 
     // Show appropriate toast based on expiry detection confidence
     if (productData.expiryConfidence === 'none' || !productData.expiryDate) {
@@ -192,39 +206,36 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       {showScanner && (
         <BarcodeScanner
           onProductFound={handleProductFound}
+          onProductScanning={handleProductScanning}
           onClose={() => setShowScanner(false)}
         />
       )}
 
       <Dialog open={isOpen && !showScanner} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleSubmit}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <form onSubmit={handleSubmit} className="pt-safe">
             <DialogHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle>{editItem ? "Edit Item" : "Add New Item"}</DialogTitle>
-                  <DialogDescription>
-                    {editItem
-                      ? "Update the details of your food item"
-                      : "Add a new item to your shelf"}
-                  </DialogDescription>
-                </div>
-                {!editItem && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowScanner(true)}
-                    className="gap-2"
-                  >
-                    <Scan className="h-4 w-4" />
-                    Scan
-                  </Button>
-                )}
-              </div>
+              <DialogTitle>{editItem ? "Edit Item" : "Add New Item"}</DialogTitle>
+              <DialogDescription>
+                {editItem
+                  ? "Update the details of your food item"
+                  : "Add a new item to your shelf"}
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
+              {!editItem && !scannedProduct && (
+                <Button
+                  type="button"
+                  variant="default"
+                  size="lg"
+                  onClick={() => setShowScanner(true)}
+                  className="w-full gap-2 h-14 text-base font-semibold"
+                >
+                  <Scan className="h-5 w-5" />
+                  Scan Barcode
+                </Button>
+              )}
               {scannedProduct && (
                 <div className="rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-3">
                   <p className="text-sm font-medium text-green-900 dark:text-green-100">
@@ -290,14 +301,29 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
 
             <div className="space-y-2">
               <Label htmlFor="expiry">Expiry Date (Optional)</Label>
-              <Input
-                id="expiry"
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                placeholder="Check package for 'Best By' date"
-              />
-              {expiryMessage ? (
+              <div className="relative">
+                <Input
+                  id="expiry"
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  placeholder="Check package for 'Best By' date"
+                  disabled={isLoadingExpiry}
+                  className={isLoadingExpiry ? "pr-10" : ""}
+                />
+                {isLoadingExpiry && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              {isLoadingExpiry ? (
+                <div className="rounded-md bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-2">
+                  <p className="text-xs text-blue-900 dark:text-blue-100">
+                    🔍 Estimating expiry date from product database...
+                  </p>
+                </div>
+              ) : expiryMessage ? (
                 <div className="rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-2">
                   <p className="text-xs text-amber-900 dark:text-amber-100">
                     ℹ️ {expiryMessage}

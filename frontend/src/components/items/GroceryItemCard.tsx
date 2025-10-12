@@ -91,7 +91,7 @@ export function GroceryItemCard({ item, onEdit, onDelete }: GroceryItemCardProps
                       {item.emoji}
                     </span>
                   )}
-                  <h3 className="font-semibold text-foreground truncate">{item.name}</h3>
+                  <h3 className="font-semibold text-foreground line-clamp-2 break-words">{item.name}</h3>
                 </div>
 
                 <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 shrink-0">

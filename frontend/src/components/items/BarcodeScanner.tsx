@@ -22,10 +22,15 @@ interface BarcodeScannerProps {
     expiryConfidence?: 'high' | 'medium' | 'low' | 'none';
     productInfo: ProductInfo;
   }) => void;
+  onProductScanning?: (productData: {
+    name: string;
+    emoji: string;
+    productInfo: ProductInfo;
+  }) => void;
   onClose: () => void;
 }
 
-export function BarcodeScanner({ onProductFound, onClose }: BarcodeScannerProps) {
+export function BarcodeScanner({ onProductFound, onProductScanning, onClose }: BarcodeScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [scanMode, setScanMode] = useState<'camera' | 'upload' | null>(null);
@@ -73,23 +78,28 @@ export function BarcodeScanner({ onProductFound, onClose }: BarcodeScannerProps)
         return;
       }
 
-      // Extract and format product data
-      const expiryEstimation = await estimateExpiryDate(product);
-      const productData = {
+      // Immediately show product info while expiry is being estimated
+      const basicProductData = {
         name: formatProductName(product),
         emoji: suggestEmojiFromProduct(product),
-        expiryDate: expiryEstimation.date,
-        expiryMessage: expiryEstimation.message,
-        expiryConfidence: expiryEstimation.confidence,
         productInfo: product,
       };
 
-      // Call the callback to populate the form
-      onProductFound(productData);
-
-      // Don't show toast here - let the parent component handle it
-      // Close the scanner
+      // Close scanner and show form with loading state for expiry
+      onProductScanning?.(basicProductData);
       onClose();
+
+      // Estimate expiry date in background
+      const expiryEstimation = await estimateExpiryDate(product);
+      const productData = {
+        ...basicProductData,
+        expiryDate: expiryEstimation.date,
+        expiryMessage: expiryEstimation.message,
+        expiryConfidence: expiryEstimation.confidence,
+      };
+
+      // Call the callback with complete data including expiry
+      onProductFound(productData);
     } catch (error) {
       console.error('Error processing barcode:', error);
       toast.error('Failed to fetch product information');
@@ -190,16 +200,6 @@ export function BarcodeScanner({ onProductFound, onClose }: BarcodeScannerProps)
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
-      <style>
-        {`
-          #barcode-reader video {
-            transform: scaleX(-1);
-          }
-          #barcode-reader canvas {
-            transform: scaleX(-1);
-          }
-        `}
-      </style>
       <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <CardHeader>
           <div className="flex items-center justify-between">

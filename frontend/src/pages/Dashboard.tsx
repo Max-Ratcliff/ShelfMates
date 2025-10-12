@@ -87,12 +87,18 @@ export default function Dashboard() {
   };
 
   const EmptyState = ({ message }: { message: string }) => (
-    <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-12 text-center">
+    <button
+      onClick={() => {
+        setEditingItem(null);
+        setIsModalOpen(true);
+      }}
+      className="w-full flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-12 text-center hover:bg-muted/30 hover:border-primary/50 transition-colors cursor-pointer"
+    >
       <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
         <Plus className="h-8 w-8 text-muted-foreground" />
       </div>
       <p className="text-sm text-muted-foreground">{message}</p>
-    </div>
+    </button>
   );
 
   // Show loading state
