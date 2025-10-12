@@ -54,21 +54,32 @@ export default function BalancesTab() {
 
     // Subscribe to expenses for the household and keep a flat list (used to show per-member items)
     const unsub = subscribeToExpenses(householdId, (items) => {
+      console.log('Expenses subscription update:', items);
       setExpenses(items);
     });
 
     return () => unsub?.();
   }, [householdId]);
 
-  // Recompute net balances whenever expenses or members change
+  // Recompute net balances whenever expenses change
   useEffect(() => {
     if (!members || members.length === 0) return;
     // build a map of member id -> net cents
     const map: Record<string, number> = {};
     members.forEach((m) => (map[m.id] = 0));
 
+    console.log('Computing balances from expenses:', expenses);
+
     for (const exp of expenses) {
       const payer = exp.payerId;
+      console.log('Processing expense:', {
+        note: exp.note,
+        payer,
+        totalCents: exp.totalCents,
+        participants: exp.participants,
+        entries: exp.entries
+      });
+
       // If entries are present, use them. Otherwise, try to compute equal split.
       const entries = exp.entries && exp.entries.length ? exp.entries : (() => {
         const parts = exp.participants || [];
@@ -79,12 +90,16 @@ export default function BalancesTab() {
         return parts.map((uid: string, idx: number) => ({ userId: uid, amountCents: share + (idx === 0 ? remainder : 0) }));
       })();
 
+      console.log('Computed entries:', entries);
+
       for (const entry of entries) {
         if (!entry || !entry.userId) continue;
         const uid = entry.userId;
         const amt = entry.amountCents || 0;
         const settled = entry.settledCents || 0;
         const outstanding = Math.max(0, amt - settled);
+
+        console.log(`Entry for ${uid}:`, { amt, settled, outstanding, isPayer: uid === payer });
 
         if (uid === payer) {
           // payer's own entry: ignore their own share
@@ -97,9 +112,11 @@ export default function BalancesTab() {
       }
     }
 
+    console.log('Final balance map:', map);
+
     // update members netCents in state
     setMembers((prev) => prev.map((m) => ({ ...m, netCents: map[m.id] || 0 })));
-  }, [expenses, members]);
+  }, [expenses]);
 
   // Helper to get expenses related to a member (they owe or they are owed)
   const expensesForMember = (memberId: string) =>
@@ -159,7 +176,7 @@ export default function BalancesTab() {
                   <div>
                     <p className="font-medium">{m.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {m.netCents < 0 ? `$${(oweAmount/100).toFixed(2)} · owes you` : `$${(owedTo/100).toFixed(2)} · they owe you`}
+                      {m.netCents > 0 ? `$${(owedTo/100).toFixed(2)} · they owe you` : m.netCents < 0 ? `$${(oweAmount/100).toFixed(2)} · you owe them` : `$0.00 · all settled`}
                     </p>
                   </div>
                 </div>
