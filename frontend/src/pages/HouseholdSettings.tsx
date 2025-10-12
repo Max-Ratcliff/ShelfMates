@@ -56,7 +56,8 @@ export default function HouseholdSettings() {
             id: doc.id,
             name: data.name || "Unknown",
             email: data.email || "",
-            isCreator: data.uid === householdData?.created_by,
+            // Firestore user doc id is the user's UID; compare doc.id to household created_by
+            isCreator: doc.id === householdData?.created_by,
           };
         });
 

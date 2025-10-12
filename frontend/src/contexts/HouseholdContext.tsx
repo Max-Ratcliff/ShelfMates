@@ -9,6 +9,8 @@ interface HouseholdData {
   name: string;
   invite_code: string;
   created_at: any;
+  // UID of the user who created the household (optional)
+  created_by?: string;
 }
 
 interface HouseholdContextType {

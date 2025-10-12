@@ -6,6 +6,7 @@ import { ItemCard, Item as ItemCardType } from "@/components/items/ItemCard";
 import { AddItemModal } from "@/components/items/AddItemModal";
 import { toast } from "sonner";
 import { useHousehold } from "@/contexts/HouseholdContext";
+import BalancesTab from "./BalancesTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useItems, useFilteredItems } from "@/hooks/useItems";
 import { deleteItem as deleteItemService, Item } from "@/services/itemService";
@@ -51,10 +52,9 @@ export default function Dashboard() {
       emptyMessage = "No items expiring soon. Great job keeping things fresh!";
       break;
     case 'balances':
-      displayItems = []; // plan to implement user balance cards
       pageTitle = "Balances";
       pageDescription = "Track who owes what in your household";
-      emptyMessage = "No balances to show.";
+      return <BalancesTab />;
       break;
     default:
       displayItems = personalItems;
