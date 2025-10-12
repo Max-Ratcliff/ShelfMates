@@ -27,10 +27,10 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
     const today = new Date();
     const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 0) return { label: "Expired", color: "red" };
+    if (diffDays < 0) return { label: "Expired", color: "gray" };
     if (diffDays <= 2) return { label: "Urgent", color: "red" };
-    if (diffDays <= 5) return { label: "Expires soon", color: "yellow" };
-    if (diffDays <= 7) return { label: "This week", color: "yellow" };
+    if (diffDays <= 5) return { label: "Use soon", color: "orange" };
+    if (diffDays <= 7) return { label: "Good to Go", color: "yellow" };
     return { label: "Fresh", color: "green" };
   };
 
@@ -42,13 +42,14 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
         <div className="flex items-start justify-between">
           <div className="flex-1 space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex items-start gap-2">
                 {item.emoji && (
-                  <span className="text-2xl shrink-0" aria-label="Item emoji">
+                  <span className="text-2xl shrink-0 mt-[2px]" aria-label="Item emoji">
                     {item.emoji}
                   </span>
                 )}
-                <h3 className="font-semibold text-foreground truncate">{item.name}</h3>
+                <h3 className="font-semibold text-foreground break-words leading-snug whitespace-normal flex-1 min-w-0">{item.name}</h3>
+
               </div>
 
               <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 shrink-0">
@@ -87,7 +88,9 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
                 variant="secondary"
                 className={cn(
                   "text-xs font-medium",
+                  status.color === "gray" && "bg-gray-500/15 text-gray-700 dark:text-gray-400 border-gray-500/30",
                   status.color === "red" && "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
+                  status.color === "orange" && "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30",
                   status.color === "yellow" && "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
                   status.color === "green" && "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30"
                 )}

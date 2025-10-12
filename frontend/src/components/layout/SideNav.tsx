@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, Users, Clock, Settings, X } from "lucide-react";
+import { Home, User, Clock, Settings, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,7 @@ interface SideNavProps {
 
 const navItems = [
   { to: "/shared", icon: Home, label: "Shared Shelf" },
-  { to: "/dashboard", icon: Users, label: "My Shelf" },
+  { to: "/dashboard", icon: User, label: "My Shelf" },
   { to: "/expiring", icon: Clock, label: "Expiring Soon" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
