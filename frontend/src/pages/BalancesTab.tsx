@@ -1,14 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { createPayment, updateExpense, deleteExpense } from '@/services/expenseService';
+import { createPayment, updateExpense, deleteExpense, deleteAllExpenses } from '@/services/expenseService';
 import { toast } from 'sonner';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { subscribeToExpenses } from '@/services/expenseService';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface MemberSummary {
   id: string;
@@ -96,7 +107,42 @@ export default function BalancesTab() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Grocery Balances</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Grocery Balances</h2>
+        {/* Temporary button to clear all expenses - remove this after clearing */}
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button className="rounded bg-red-600 px-3 py-1 text-white text-sm hover:bg-red-700">
+              Clear All Expenses
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear All Expenses</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete ALL expenses from your household. This action cannot be undone. Are you absolutely sure?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700"
+                onClick={async () => {
+                  try {
+                    const deletedCount = await deleteAllExpenses(householdId!);
+                    toast.success(`Cleared ${deletedCount} expenses`);
+                  } catch (err: any) {
+                    console.error('Failed to clear expenses', err);
+                    toast.error(`Failed to clear expenses: ${err?.message || err}`);
+                  }
+                }}
+              >
+                Clear All
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
 
       <div className="space-y-3">
         {members.map((m) => {
@@ -136,7 +182,6 @@ export default function BalancesTab() {
                         <div key={e.id} className="flex items-center justify-between rounded-md bg-muted/30 p-3">
                           <div>
                             <p className="font-medium">{e.note || 'Expense'}</p>
-                            <p className="text-sm text-muted-foreground">Paid by {e.payerId}</p>
                             {/* show per-entry outstanding info when applicable */}
                             {currentUser && (() => {
                               const myEntry = (e.entries || []).find((en: any) => en.userId === currentUser.uid);
@@ -152,67 +197,125 @@ export default function BalancesTab() {
                             })()}
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">${(e.totalCents/100).toFixed(2)}</p>
+                            {/* Show individual amount for current user, or total if they're the payer */}
+                            {currentUser && (() => {
+                              const myEntry = (e.entries || []).find((en: any) => en.userId === currentUser.uid);
+                              if (myEntry) {
+                                const owed = myEntry.amountCents || 0;
+                                return (
+                                  <p className="font-semibold">${(owed/100).toFixed(2)}</p>
+                                );
+                              } else if (currentUser.uid === e.payerId) {
+                                // Show total for the payer
+                                return (
+                                  <p className="font-semibold">${(e.totalCents/100).toFixed(2)}</p>
+                                );
+                              }
+                              return null;
+                            })()}
                             <p className="text-sm text-muted-foreground">{e.status}</p>
                             {/* show mark-as-paid button if currentUser owes and there is outstanding amount */}
-                            {currentUser && (() => {
+                            {currentUser && currentUser.uid === m.id && (() => {
                               const myEntry = (e.entries || []).find((en: any) => en.userId === currentUser.uid);
                               if (myEntry) {
                                 const owed = myEntry.amountCents || 0;
                                 const settled = myEntry.settledCents || 0;
                                 const outstanding = Math.max(0, owed - settled);
+                                
                                 if (outstanding > 0) {
                                   return (
-                                    <button
-                                      className="mt-2 inline-flex items-center gap-2 rounded bg-primary px-3 py-1 text-white"
-                                      onClick={async () => {
-                                        try {
-                                          // create a payment record from current user to the payer
-                                          await createPayment({
-                                            householdId: householdId!,
-                                            fromUser: currentUser.uid,
-                                            toUser: e.payerId,
-                                            totalCents: outstanding,
-                                            appliesTo: [{ expenseId: e.id, userId: currentUser.uid, amountCents: outstanding }],
-                                          });
+                                    <>
+                                      <button
+                                        className="mt-2 inline-flex items-center gap-2 rounded bg-primary px-3 py-1 text-white"
+                                        onClick={async () => {
+                                          try {
+                                            // create a payment record from current user to the payer
+                                            await createPayment({
+                                              householdId: householdId!,
+                                              fromUser: currentUser.uid,
+                                              toUser: e.payerId,
+                                              totalCents: outstanding,
+                                              appliesTo: [{ expenseId: e.id, userId: currentUser.uid, amountCents: outstanding }],
+                                            });
 
-                                          // update the expense entry's settledCents and deduct from total
-                                          const updatedEntries = (e.entries || []).map((en: any) => {
-                                            if (en.userId === currentUser.uid) {
-                                              return { ...en, settledCents: (en.settledCents || 0) + outstanding };
+                                            // Update only settledCents for current user's entry
+                                            const updatedEntries = (e.entries || []).map((en: any) => {
+                                              if (en.userId === currentUser.uid) {
+                                                return { ...en, settledCents: (en.settledCents || 0) + outstanding };
+                                              }
+                                              return en;
+                                            });
+
+                                            // Check if ALL entries are fully settled
+                                            const allSettled = updatedEntries.every((en: any) => 
+                                              (en.settledCents || 0) >= (en.amountCents || 0)
+                                            );
+
+                                            if (allSettled) {
+                                              // Everyone has paid — remove the expense entirely
+                                              try {
+                                                await deleteExpense(householdId!, e.id);
+                                                toast.success('Expense fully settled and removed');
+                                              } catch (delErr: any) {
+                                                console.error('Failed to delete settled expense', delErr);
+                                                toast.error(`Failed to remove expense: ${delErr?.message || delErr}`);
+                                              }
+                                            } else {
+                                              // Partial settlement — update entries only, keep totalCents unchanged
+                                              await updateExpense(householdId!, e.id, { 
+                                                entries: updatedEntries, 
+                                                status: 'partially_settled' 
+                                              } as any);
+                                              toast.success('Payment recorded');
                                             }
-                                            return en;
-                                          });
-
-                                          // deduct the paid share from totalCents
-                                          const newTotal = Math.max(0, (e.totalCents || 0) - outstanding);
-
-                                          // check if all entries are fully settled
-                                          const allSettled = updatedEntries.every((en: any) => (en.amountCents || 0) <= (en.settledCents || 0));
-
-                                          if (allSettled || newTotal === 0) {
-                                            // everyone has paid — remove the expense entirely
-                                            try {
-                                              await deleteExpense(householdId!, e.id);
-                                              toast.success('Expense fully settled and removed');
-                                            } catch (delErr: any) {
-                                              console.error('Failed to delete settled expense', delErr);
-                                              toast.error(`Failed to remove expense: ${delErr?.message || delErr}`);
-                                            }
-                                          } else {
-                                            // partial settlement — update entries, total and status
-                                            const newStatus = 'partially_settled';
-                                            await updateExpense(householdId!, e.id, { entries: updatedEntries, totalCents: newTotal, status: newStatus } as any);
-                                            toast.success('Payment recorded');
+                                          } catch (err: any) {
+                                            console.error('Failed to mark paid', err);
+                                            toast.error(`Failed to record payment: ${err?.message || err}`);
                                           }
-                                        } catch (err: any) {
-                                          console.error('Failed to mark paid', err);
-                                          toast.error(`Failed to record payment: ${err?.message || err}`);
-                                        }
-                                      }}
-                                    >
-                                      Mark as paid
-                                    </button>
+                                        }}
+                                      >
+                                        Mark as paid
+                                      </button>
+                                      {/* Show delete button only if current user created the expense and is viewing their own card */}
+                                      {currentUser.uid === e.createdBy && currentUser.uid === m.id && (
+                                        <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                            <button
+                                              className="mt-2 ml-2 inline-flex items-center gap-2 rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700"
+                                              aria-label="Delete expense"
+                                            >
+                                              <Trash2 size={14} />
+                                              Delete
+                                            </button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>Delete Expense</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                Are you sure you want to delete this expense? This action cannot be undone and will remove the expense from everyone's balance.
+                                              </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction
+                                                className="bg-red-600 hover:bg-red-700"
+                                                onClick={async () => {
+                                                  try {
+                                                    await deleteExpense(householdId!, e.id);
+                                                    toast.success('Expense deleted successfully');
+                                                  } catch (err: any) {
+                                                    console.error('Failed to delete expense', err);
+                                                    toast.error(`Failed to delete expense: ${err?.message || err}`);
+                                                  }
+                                                }}
+                                              >
+                                                Delete
+                                              </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
+                                      )}
+                                    </>
                                   );
                                 }
                               }

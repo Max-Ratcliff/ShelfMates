@@ -223,6 +223,7 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
                 participants: participantsList,
                 method: 'equal',
                 entries,
+                note: name.trim(), // Use the item name as the expense note
                 itemId: newItemId,
               });
               toast.success("Expense created");

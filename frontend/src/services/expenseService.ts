@@ -241,10 +241,24 @@ export async function createExpenseWithPayment(expense: ExpenseCreate, payment?:
   await batch.commit();
 }
 
+/**
+ * Delete all expenses for a household (use with caution!)
+ */
+export async function deleteAllExpenses(householdId: string) {
+  const expensesQuery = query(expensesColl(householdId));
+  const snapshot = await getDocs(expensesQuery);
+  
+  const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+  await Promise.all(deletePromises);
+  
+  return snapshot.docs.length;
+}
+
 export default {
   createExpense,
   subscribeToExpenses,
   getExpensesByItem,
   createPayment,
   createExpenseWithPayment,
+  deleteAllExpenses,
 };
