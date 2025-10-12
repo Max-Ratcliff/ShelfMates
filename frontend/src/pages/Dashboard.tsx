@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Scan } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ItemCard, Item as ItemCardType } from "@/components/items/ItemCard";
 import { GroceryItemCard } from "@/components/items/GroceryItemCard";
 import { AddItemModal } from "@/components/items/AddItemModal";
 import { AddGroceryItemModal } from "@/components/items/AddGroceryItemModal";
+import { BarcodeScanner } from "@/components/items/BarcodeScanner";
+import { ProductInfo } from "@/services/barcodeService";
 import { toast } from "sonner";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +25,8 @@ export default function Dashboard() {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannedData, setScannedData] = useState<any>(null);
 
   // Determine which view to show based on route
   const currentView = location.pathname.split('/')[1] || 'dashboard';
@@ -84,6 +88,12 @@ export default function Dashboard() {
       console.error("Error deleting item:", error);
       toast.error("Failed to delete item");
     }
+  };
+
+  const handleProductFound = (productData: any) => {
+    setScannedData(productData);
+    setShowScanner(false);
+    setIsModalOpen(true);
   };
 
   const EmptyState = ({ message }: { message: string }) => (
@@ -180,18 +190,43 @@ export default function Dashboard() {
         )}
 
 
-      {/* Floating Add Button */}
-      <Button
-        size="lg"
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-14 w-14 rounded-full shadow-lg touch-manipulation"
-        onClick={() => {
-          setEditingItem(null);
-          setIsModalOpen(true);
-        }}
-        aria-label="Add new item"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col gap-3">
+        {/* Scan Button */}
+        {currentView !== 'groceries' && (
+          <Button
+            size="lg"
+            variant="secondary"
+            className="h-14 w-14 rounded-full shadow-lg touch-manipulation p-0"
+            onClick={() => setShowScanner(true)}
+            aria-label="Scan barcode"
+          >
+            <Scan className="h-6 w-6" />
+          </Button>
+        )}
+
+        {/* Add Button */}
+        <Button
+          size="lg"
+          className="h-16 w-16 rounded-full shadow-lg touch-manipulation p-0"
+          onClick={() => {
+            setEditingItem(null);
+            setScannedData(null);
+            setIsModalOpen(true);
+          }}
+          aria-label="Add new item"
+        >
+          <Plus className="h-7 w-7" />
+        </Button>
+      </div>
+
+      {/* Barcode Scanner */}
+      {showScanner && (
+        <BarcodeScanner
+          onProductFound={handleProductFound}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
       {currentView === 'groceries' ? (
         <AddGroceryItemModal
@@ -199,6 +234,7 @@ export default function Dashboard() {
           onClose={() => {
             setIsModalOpen(false);
             setEditingItem(null);
+            setScannedData(null);
           }}
           onSave={handleSaveItem}
           editItem={editingItem}
@@ -209,9 +245,11 @@ export default function Dashboard() {
           onClose={() => {
             setIsModalOpen(false);
             setEditingItem(null);
+            setScannedData(null);
           }}
           onSave={handleSaveItem}
           editItem={editingItem}
+          initialData={scannedData}
         />
       )}
     </div>

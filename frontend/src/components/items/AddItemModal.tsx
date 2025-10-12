@@ -35,6 +35,7 @@ interface AddItemModalProps {
   onClose: () => void;
   onSave?: (item: Omit<Item, "id">) => void;
   editItem?: FirestoreItem | null;
+  initialData?: any;
 }
 
 const commonEmojis = {
@@ -58,7 +59,7 @@ const commonEmojis = {
 
 
 
-export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModalProps) {
+export function AddItemModal({ isOpen, onClose, onSave, editItem, initialData }: AddItemModalProps) {
   const { currentUser } = useAuth();
   const { householdId, userData } = useHousehold();
   const [name, setName] = useState("");
@@ -81,6 +82,14 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       setIsCommunal(editItem.isCommunal);
       setEmoji(editItem.emoji || "");
       setExpiryMessage("");
+    } else if (initialData) {
+      setName(initialData.name || "");
+      setEmoji(initialData.emoji || "");
+      setExpiryDate(initialData.expiryDate || "");
+      setExpiryMessage(initialData.expiryMessage || "");
+      setScannedProduct(initialData.productInfo || null);
+      setQuantity(1);
+      setIsCommunal(true);
     } else {
       setName("");
       setQuantity(1);
@@ -88,8 +97,9 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
       setIsCommunal(true);
       setEmoji("");
       setExpiryMessage("");
+      setScannedProduct(null);
     }
-  }, [editItem, isOpen]);
+  }, [editItem, initialData, isOpen]);
 
   const handleProductScanning = (productData: {
     name: string;

@@ -54,7 +54,7 @@ export function GroceryItemCard({ item, onEdit, onDelete }: GroceryItemCardProps
 
   return (
     <Card className={cn("group transition-all hover:shadow-md", isChecked && "bg-muted/50")}>
-      <CardContent className="p-4">
+      <CardContent className="p-4 relative">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <AlertDialog>
@@ -84,36 +84,34 @@ export function GroceryItemCard({ item, onEdit, onDelete }: GroceryItemCardProps
               </AlertDialogContent>
             </AlertDialog>
             <div className={cn("flex-1 space-y-2", isChecked && "line-through text-muted-foreground")}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {item.emoji && (
-                    <span className="text-2xl shrink-0" aria-label="Item emoji">
-                      {item.emoji}
-                    </span>
-                  )}
-                  <h3 className="font-semibold text-foreground line-clamp-2 break-words">{item.name}</h3>
-                </div>
+              <div className="flex items-start gap-2 pr-2">
+                {item.emoji && (
+                  <span className="text-2xl shrink-0" aria-label="Item emoji">
+                    {item.emoji}
+                  </span>
+                )}
+                <h3 className="font-semibold text-foreground line-clamp-2 break-words">{item.name}</h3>
+              </div>
 
-                <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 hover:bg-primary/10 hover:text-primary touch-manipulation"
-                    onClick={() => onEdit?.(item)}
-                    aria-label="Edit item"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive touch-manipulation"
-                    onClick={() => onDelete?.(item.id)}
-                    aria-label="Delete item"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 bg-card/95 backdrop-blur-sm rounded-md">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:bg-primary/10 hover:text-primary touch-manipulation"
+                  onClick={() => onEdit?.(item)}
+                  aria-label="Edit item"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive touch-manipulation"
+                  onClick={() => onDelete?.(item.id)}
+                  aria-label="Delete item"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
 
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

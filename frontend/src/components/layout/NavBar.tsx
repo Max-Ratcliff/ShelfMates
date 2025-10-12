@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface NavBarProps {
@@ -68,15 +68,39 @@ export function NavBar({ onMenuClick, householdName = "My Household" }: NavBarPr
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 touch-manipulation flex-shrink-0" aria-label="User menu">
               <Avatar className="h-9 w-9">
+                {currentUser?.photoURL && (
+                  <AvatarImage
+                    src={currentUser.photoURL}
+                    alt={currentUser.displayName || "User"}
+                    referrerPolicy="no-referrer"
+                  />
+                )}
                 <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                   {getUserInitial()}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <div className="px-2 py-1.5">
-              <p className="text-sm font-medium truncate">{currentUser?.email || householdName}</p>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="flex items-center gap-3 px-2 py-2">
+              <Avatar className="h-10 w-10">
+                {currentUser?.photoURL && (
+                  <AvatarImage
+                    src={currentUser.photoURL}
+                    alt={currentUser.displayName || "User"}
+                    referrerPolicy="no-referrer"
+                  />
+                )}
+                <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                  {getUserInitial()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                {currentUser?.displayName && (
+                  <p className="text-sm font-medium truncate">{currentUser.displayName}</p>
+                )}
+                <p className="text-xs text-muted-foreground truncate">{currentUser?.email}</p>
+              </div>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/settings')}>
