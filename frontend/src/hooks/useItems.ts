@@ -53,11 +53,17 @@ export const useFilteredItems = (items: Item[], userId: string) => {
   const communalItems = items.filter((item) => item.isCommunal && !item.isGrocery);
 
   const expiringItems = items.filter((item) => {
+    // Exclude grocery items
+    if (item.isGrocery) return false;
+
     // Include items without expiry date to keep users aware
     if (!item.expiryDate) return true;
 
-    const expiry = new Date(item.expiryDate);
+    // Parse date as local time to avoid timezone issues
+    const [year, month, day] = item.expiryDate.split('-').map(Number);
+    const expiry = new Date(year, month - 1, day); // month is 0-indexed
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to midnight
     const diffDays = Math.ceil(
       (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
@@ -65,9 +71,17 @@ export const useFilteredItems = (items: Item[], userId: string) => {
   });
 
   const expiredItems = items.filter((item) => {
+    // Exclude grocery items
+    if (item.isGrocery) return false;
+
     if (!item.expiryDate) return false;
-    const expiry = new Date(item.expiryDate);
+
+    // Parse date as local time to avoid timezone issues
+    const [year, month, day] = item.expiryDate.split('-').map(Number);
+    const expiry = new Date(year, month - 1, day); // month is 0-indexed
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to midnight
+
     return expiry < today;
   });
 

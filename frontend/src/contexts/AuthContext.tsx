@@ -128,6 +128,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await createOrUpdateUser(result.user.uid, {
         name: result.user.displayName || result.user.email?.split('@')[0] || 'User',
         email: result.user.email || '',
+        photoURL: result.user.photoURL || '',
       });
 
       toast.success('Logged in with Google successfully!', {

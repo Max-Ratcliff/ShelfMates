@@ -57,12 +57,19 @@ export function HouseholdProvider({ children }: HouseholdProviderProps) {
           await createOrUpdateUser(currentUser.uid, {
             name: currentUser.displayName || 'User',
             email: currentUser.email || '',
+            photoURL: currentUser.photoURL || '',
             household_id: null,
           });
 
           const newUser = await getUser(currentUser.uid);
           setUserData(newUser);
         } else {
+          // Sync photoURL from Firebase Auth if it's missing in Firestore
+          if (currentUser.photoURL && !user.photoURL) {
+            await createOrUpdateUser(currentUser.uid, {
+              photoURL: currentUser.photoURL,
+            });
+          }
           setUserData(user);
         }
       } catch (error) {

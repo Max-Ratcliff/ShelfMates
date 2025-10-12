@@ -3,7 +3,7 @@ import { Copy, RefreshCw, LogOut, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
@@ -27,6 +27,7 @@ interface HouseholdMember {
   id: string;
   name: string;
   email: string;
+  photoURL?: string;
   isCreator: boolean;
 }
 
@@ -56,6 +57,7 @@ export default function HouseholdSettings() {
             id: doc.id,
             name: data.name || "Unknown",
             email: data.email || "",
+            photoURL: data.photoURL || "",
             isCreator: data.uid === householdData?.created_by,
           };
         });
@@ -217,6 +219,13 @@ export default function HouseholdSettings() {
                 {members.map((member) => (
                   <div key={member.id} className="flex items-center gap-4">
                     <Avatar>
+                      {member.photoURL && (
+                        <AvatarImage
+                          src={member.photoURL}
+                          alt={member.name}
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
                       <AvatarFallback className="bg-secondary text-secondary-foreground">
                         {member.name.charAt(0).toUpperCase()}
                       </AvatarFallback>

@@ -169,8 +169,8 @@ export default function Dashboard() {
         )}
       </div>
 
-              {/* Expired Items Section */}
-        {expiredItems && expiredItems.length > 0 && (
+              {/* Expired Items Section - Hide on grocery list */}
+        {currentView !== 'groceries' && expiredItems && expiredItems.length > 0 && (
           <div className="mt-10 space-y-4">
             <h2 className="text-xl sm:text-2xl font-semibold text-foreground">Items to Toss</h2>
             <p className="text-sm text-muted-foreground mb-4">
@@ -191,7 +191,7 @@ export default function Dashboard() {
 
 
       {/* Floating Action Buttons */}
-      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col gap-3">
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col items-center gap-3">
         {/* Scan Button */}
         {currentView !== 'groceries' && (
           <Button

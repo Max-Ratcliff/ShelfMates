@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { updateItem } from "@/services/itemService";
 import { toast } from "sonner";
+import { formatNameWithInitial } from "@/lib/nameUtils";
 
 export interface Item {
   id: string;
@@ -93,7 +94,7 @@ export function GroceryItemCard({ item, onEdit, onDelete }: GroceryItemCardProps
                 <h3 className="font-semibold text-foreground line-clamp-2 break-words">{item.name}</h3>
               </div>
 
-              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 bg-card/95 backdrop-blur-sm rounded-md">
+              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 bg-card/95 backdrop-blur-sm rounded-md p-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -120,14 +121,14 @@ export function GroceryItemCard({ item, onEdit, onDelete }: GroceryItemCardProps
 
               <div className="flex items-center gap-2">
                 {item.isCommunal ? (
-                  <Badge variant="outline" className="gap-1 text-xs">
-                    <Users className="h-3 w-3" />
+                  <Badge variant="outline" className="gap-1 text-xs whitespace-nowrap">
+                    <Users className="h-3 w-3 shrink-0" />
                     Communal
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="gap-1 text-xs">
-                    <User className="h-3 w-3" />
-                    {item.ownerName || "Personal"}
+                  <Badge variant="outline" className="gap-1 text-xs whitespace-nowrap">
+                    <User className="h-3 w-3 shrink-0" />
+                    {item.ownerName ? formatNameWithInitial(item.ownerName) : "Personal"}
                   </Badge>
                 )}
               </div>

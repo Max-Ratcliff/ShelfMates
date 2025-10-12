@@ -12,6 +12,7 @@ export interface UserData {
   uid: string;
   name: string;
   email: string;
+  photoURL?: string;
   household_id?: string | null;
   joined_at?: Timestamp;
   created_at?: Timestamp;

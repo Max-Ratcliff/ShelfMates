@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatNameWithInitial } from "@/lib/nameUtils";
 
 export interface Item {
   id: string;
@@ -24,7 +25,10 @@ interface ItemCardProps {
 export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
   const getExpiryStatus = (date?: string) => {
     if (!date) return { label: "No expiry date", color: "orange" };
-    const expiry = new Date(date);
+
+    // Parse date as local time to avoid timezone issues
+    const [year, month, day] = date.split('-').map(Number);
+    const expiry = new Date(year, month - 1, day); // month is 0-indexed
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffTime = expiry.getTime() - today.getTime();
@@ -55,7 +59,7 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
               <h3 className="font-semibold text-foreground line-clamp-2 break-words leading-snug flex-1 min-w-0">{item.name}</h3>
             </div>
 
-            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 bg-card/95 backdrop-blur-sm rounded-md">
+            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 bg-card/95 backdrop-blur-sm rounded-md p-1">
               <Button
                 variant="ghost"
                 size="icon"
@@ -89,7 +93,7 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
               <Badge
                 variant="secondary"
                 className={cn(
-                  "text-xs font-medium",
+                  "text-xs font-medium whitespace-nowrap",
                   status.color === "gray" && "bg-gray-500/15 text-gray-700 dark:text-gray-400 border-gray-500/30",
                   status.color === "red" && "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
                   status.color === "orange" && "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30",
@@ -102,14 +106,14 @@ export function ItemCard({ item, onEdit, onDelete }: ItemCardProps) {
               </Badge>
 
               {item.isCommunal ? (
-                <Badge variant="outline" className="gap-1 text-xs">
-                  <Users className="h-3 w-3" />
+                <Badge variant="outline" className="gap-1 text-xs whitespace-nowrap">
+                  <Users className="h-3 w-3 shrink-0" />
                   Communal
                 </Badge>
               ) : (
-                <Badge variant="outline" className="gap-1 text-xs">
-                  <User className="h-3 w-3" />
-                  {item.ownerName || "Personal"}
+                <Badge variant="outline" className="gap-1 text-xs whitespace-nowrap">
+                  <User className="h-3 w-3 shrink-0" />
+                  {item.ownerName ? formatNameWithInitial(item.ownerName) : "Personal"}
                 </Badge>
               )}
             </div>
