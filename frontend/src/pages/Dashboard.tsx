@@ -17,7 +17,7 @@ export default function Dashboard() {
   const { currentUser } = useAuth();
   const { householdId } = useHousehold();
   const { items, loading } = useItems(householdId);
-  const { personalItems, communalItems, expiringItems, groceryItems } = useFilteredItems(
+  const { personalItems, communalItems, expiringItems, expiredItems, groceryItems } = useFilteredItems(
     items,
     currentUser?.uid || ''
   );
@@ -158,6 +158,27 @@ export default function Dashboard() {
           <EmptyState message={emptyMessage} />
         )}
       </div>
+
+              {/* Expired Items Section */}
+        {expiredItems && expiredItems.length > 0 && (
+          <div className="mt-10 space-y-4">
+            <h2 className="text-xl sm:text-2xl font-semibold text-foreground">Items to Toss</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              These items have already expired.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {expiredItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item as ItemCardType}
+                  onEdit={handleEditItem}
+                  onDelete={handleDeleteItem}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
 
       {/* Floating Add Button */}
       <Button

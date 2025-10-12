@@ -37,16 +37,26 @@ interface AddItemModalProps {
   editItem?: FirestoreItem | null;
 }
 
-const commonEmojis = [
-  "🍎", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍑", "🥭",
-  "🥥", "🥝", "🍅", "🥑", "🥦", "🥬", "🥒", "🌶️", "🌽", "🥕",
-  "🥔", "🍠", "🧄", "🧅", "🥜", "🫘", "🍞", "🥐", "🥖", "🥨",
-  "🥯", "🧀", "🥚", "🍳", "🥓", "🥩", "🍗", "🍖", "🦴", "🌭",
-  "🍔", "🍟", "🍕", "🥪", "🥙", "🌮", "🌯", "🫔", "🥗", "🍝",
-  "🍜", "🍲", "🍛", "🍣", "🍱", "🥟", "🍤", "🍙", "🍚", "🍘",
-  "🥧", "🧁", "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩",
-  "🥛", "🍼", "☕", "🫖", "🧃", "🥤", "🧋", "🍷", "🍺", "🧊"
-];
+const commonEmojis = {
+  "🍎": "apple", "🍊": "orange", "🍋": "lemon", "🍌": "banana", "🍉": "watermelon",
+  "🍇": "grapes", "🍓": "strawberry", "🫐": "blueberries", "🍑": "peach", "🥭": "mango",
+  "🥥": "coconut", "🥝": "kiwi", "🍅": "tomato", "🥑": "avocado", "🥦": "broccoli",
+  "🥬": "lettuce", "🥒": "cucumber", "🌶️": "pepper", "🌽": "corn", "🥕": "carrot",
+  "🥔": "potato", "🍠": "sweet potato", "🧄": "garlic", "🧅": "onion", "🥜": "nuts",
+  "🫘": "beans", "🍞": "bread", "🥐": "croissant", "🥖": "baguette", "🥨": "pretzel",
+  "🥯": "bagel", "🧀": "cheese", "🥚": "egg", "🥓": "bacon",
+  "🥩": "meat", "🍗": "chicken", "🍖": "meat on bone", "🌭": "hot dog",
+  "🍔": "hamburger", "🍟": "french fries", "🍕": "pizza", "🥪": "sandwich", "🥙": "stuffed flatbread",
+  "🌮": "taco", "🌯": "burrito", "🫔": "tamale", "🥗": "salad", "🍝": "pasta",
+  "🍜": "ramen", "🍲": "pot of food", "🍛": "curry", "🍣": "sushi", "🍱": "bento box",
+  "🥟": "dumpling", "🍤": "shrimp", "🍙": "rice ball", "🍚": "cooked rice", "🍘": "rice cracker",
+  "🥧": "pie", "🧁": "cupcake", "🍰": "shortcake", "🎂": "cake", "🍮": "custard",
+  "🍭": "lollipop", "🍬": "candy", "🍫": "chocolate", "🍿": "popcorn", "🍩": "doughnut",
+  "🥛": "milk", "🍼": "baby bottle", "☕": "coffee", "🫖": "tea", "🧃": "juice",
+  "🥤": "drink", "🧋": "bubble tea", "🍷": "wine", "🍺": "beer"
+};
+
+
 
 export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModalProps) {
   const { currentUser } = useAuth();
@@ -260,18 +270,18 @@ export function AddItemModal({ isOpen, onClose, onSave, editItem }: AddItemModal
                 >
                   <span className="text-muted-foreground text-xs">None</span>
                 </button>
-                {commonEmojis.map((e) => (
+                {Object.entries(commonEmojis).map(([e, name]) => (
                   <button
-                    key={e}
-                    type="button"
-                    onClick={() => setEmoji(e)}
-                    className={`w-10 h-10 flex items-center justify-center text-2xl rounded-md border-2 transition-all hover:scale-110 ${
-                      emoji === e ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
-                    }`}
-                    aria-label={`Select ${e} emoji`}
-                  >
-                    {e}
-                  </button>
+                  key={e}
+                  type="button"
+                  onClick={() => setEmoji(e)}
+                  className={`w-10 h-10 flex items-center justify-center text-2xl rounded-md border-2 transition-all hover:scale-110 ${
+                    emoji === e ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
+                  }`}
+                  aria-label={`Select ${e} emoji`}
+                >
+                  {e}
+                </button>
                 ))}
               </div>
             </div>
