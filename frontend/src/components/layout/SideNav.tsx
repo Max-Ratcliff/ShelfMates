@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, Clock, Settings, X, ShoppingBasket } from "lucide-react";
+import { Home, Clock, Settings, X, ShoppingBasket, CircleDollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -12,9 +12,9 @@ const navItems = [
   { to: "/dashboard", icon: Home, label: "My Shelf" },
   { to: "/expiring", icon: Clock, label: "Expiring Soon" },
   { to: "/groceries", icon: ShoppingBasket, label: "Grocery List" },
+  { to: "/balances", icon: CircleDollarSign, label: "Balances" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
-
 export function SideNav({ isOpen, onClose }: SideNavProps) {
   return (
     <>

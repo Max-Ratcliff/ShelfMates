@@ -10,6 +10,7 @@ import { BarcodeScanner } from "@/components/items/BarcodeScanner";
 import { ProductInfo } from "@/services/barcodeService";
 import { toast } from "sonner";
 import { useHousehold } from "@/contexts/HouseholdContext";
+import BalancesTab from "./BalancesTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useItems, useFilteredItems } from "@/hooks/useItems";
 import { deleteItem as deleteItemService, Item } from "@/services/itemService";
@@ -102,6 +103,10 @@ export default function Dashboard() {
       pageDescription = "Items that need to be bought for your household";
       emptyMessage = "No grocery items yet. Shelf is fully stocked!";
       break;
+    case 'balances':
+      pageTitle = "Balances";
+      pageDescription = "Track who owes what in your household";
+      return <BalancesTab />;
     default:
       pageTitle = "My Shelf";
       pageDescription = "Your household food inventory";

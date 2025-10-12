@@ -19,7 +19,9 @@ service cloud.firestore {
       allow read: if isAuthenticated() && request.auth.uid == userId;
 
       // Users can read other users in the same household
+      // This is needed for household members list and participant picker
       allow read: if isAuthenticated() &&
+                     userHouseholdId() != null &&
                      resource.data.household_id != null &&
                      resource.data.household_id == userHouseholdId();
 
@@ -49,6 +51,46 @@ service cloud.firestore {
       // Only allow deletion if user is in the household (for now)
       allow delete: if isAuthenticated() &&
                        userHouseholdId() == householdId;
+
+      // Expenses subcollection: allow household members to read and create expenses
+      match /expenses/{expenseId} {
+        allow read: if isAuthenticated() && userHouseholdId() == householdId;
+
+        // Conservative create rules: creator must be the auth user and payer must be auth user
+        allow create: if isAuthenticated()
+                       && userHouseholdId() == householdId
+                       && request.resource.data.createdBy == request.auth.uid
+                       && request.resource.data.payerId == request.auth.uid
+                       && request.resource.data.totalCents is number
+                       && request.resource.data.participants is list
+                       && request.resource.data.entries is list;
+
+        // Allow updates only by the original creator (prevents arbitrary edits)
+        allow update: if isAuthenticated()
+                       && userHouseholdId() == householdId
+                       && resource.data.createdBy == request.auth.uid
+                       && request.resource.data.createdBy == resource.data.createdBy;
+
+        // Allow deletion only by the creator
+        allow delete: if isAuthenticated()
+                       && userHouseholdId() == householdId
+                       && resource.data.createdBy == request.auth.uid;
+      }
+
+      // Payments subcollection: allow household members to create/read payments
+      match /payments/{paymentId} {
+        allow read: if isAuthenticated() && userHouseholdId() == householdId;
+
+        allow create: if isAuthenticated()
+                       && userHouseholdId() == householdId
+                       && request.resource.data.fromUser == request.auth.uid
+                       && request.resource.data.totalCents is number;
+
+        // Allow update/delete only by the creator (fromUser)
+        allow update, delete: if isAuthenticated()
+                               && userHouseholdId() == householdId
+                               && resource.data.fromUser == request.auth.uid;
+      }
     }
 
     // Items collection
